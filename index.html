@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ff5f7a">
-  <title>Confesso que bebi — acesso sem senha</title>
+  <title>Confesso que bebi — diagnóstico de acesso</title>
   <meta name="description" content="Registro pessoal de consumo de bebidas com sincronização entre aparelhos">
   <style>
     :root{
@@ -1563,16 +1563,21 @@
     }
 
     function emailLinkMessage(error){
+      const code=String(error?.code||"erro-sem-codigo");
       const messages={
         "auth/invalid-email":"Digite um e-mail válido.",
         "auth/missing-email":"Digite seu e-mail.",
         "auth/unauthorized-continue-uri":"O endereço do GitHub precisa estar autorizado no Firebase.",
-        "auth/operation-not-allowed":"Ative o acesso por link em Authentication → Método de login → E-mail/senha.",
+        "auth/operation-not-allowed":"Ative o link por e-mail em Authentication → Método de login → E-mail/senha.",
         "auth/network-request-failed":"Não foi possível acessar a internet.",
         "auth/invalid-action-code":"Este link expirou ou já foi usado. Peça um novo.",
-        "auth/expired-action-code":"Este link expirou. Peça um novo."
+        "auth/expired-action-code":"Este link expirou. Peça um novo.",
+        "auth/quota-exceeded":"O limite diário de links por e-mail do plano gratuito foi atingido. Tente novamente amanhã.",
+        "auth/too-many-requests":"Foram feitas muitas tentativas. Aguarde e tente novamente mais tarde.",
+        "auth/app-not-authorized":"Este endereço não está autorizado para usar o Firebase.",
+        "auth/invalid-api-key":"A configuração do Firebase está inválida."
       };
-      return messages[error?.code]||"Não foi possível concluir o acesso.";
+      return messages[code]||`Não foi possível concluir o acesso. Código: ${code}`;
     }
 
     async function sendAccessLink(intent,button){
@@ -1597,7 +1602,7 @@
         localStorage.setItem("confesso-que-bebi-auth-intent",intent);
         el.authMessage.textContent=`Enviamos um link para ${email}. Abra o e-mail e toque no link.`;
       }catch(error){
-        console.error(error);
+        console.error("Falha ao enviar link:",error?.code,error);
         el.authMessage.textContent=emailLinkMessage(error);
       }finally{
         setEmailButtonsBusy(button,false);
