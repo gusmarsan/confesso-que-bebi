@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ff5f7a">
   <title>Confesso que bebi</title>
+  <meta name="description" content="Registro pessoal de consumo de bebidas com sincronização entre aparelhos">
   <style>
     :root{
       --ink:#2d2540;
@@ -55,6 +56,44 @@
     .saved-pill{
       padding:7px 10px;border:1px solid #48d7bd42;border-radius:999px;
       background:#48d7bd12;color:#168d78;font-size:.63rem;font-weight:800;
+      white-space:nowrap;
+    }
+    .saved-pill.syncing{border-color:#ffd16666;background:#ffd16620;color:#8a6516}
+    .saved-pill.offline{border-color:#ff8f7066;background:#ff8f7017;color:#b24a38}
+    .account-tools{display:flex;align-items:center;gap:6px}
+    .logout-button{
+      min-height:31px;padding:0 9px;border:1px solid var(--line);border-radius:10px;
+      background:#fff;color:var(--muted);font-size:.61rem;font-weight:800;
+    }
+    .auth-screen{
+      position:fixed;z-index:500;inset:0;display:grid;place-items:center;overflow:auto;
+      padding:22px;background:
+        radial-gradient(circle at 0 0,rgba(255,209,102,.34),transparent 34%),
+        radial-gradient(circle at 100% 8%,rgba(129,88,232,.20),transparent 30%),
+        var(--paper);
+    }
+    .auth-screen.hidden{display:none}
+    .auth-card{
+      width:min(100%,390px);padding:25px;border:1px solid var(--line);border-radius:26px;
+      background:#fff;box-shadow:var(--shadow);
+    }
+    .auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+    .auth-brand .brand-mark{flex:0 0 auto}
+    .auth-brand h1{margin:0;font-size:1.15rem;letter-spacing:-.03em}
+    .auth-brand p{margin:4px 0 0;color:var(--muted);font-size:.7rem;line-height:1.4}
+    .auth-card h2{margin:0;font-size:1.45rem;letter-spacing:-.04em}
+    .auth-intro{margin:7px 0 20px;color:var(--muted);font-size:.75rem;line-height:1.5}
+    .auth-field{margin-bottom:13px}
+    .auth-field label{display:block;margin-bottom:7px;color:var(--muted);font-size:.68rem;font-weight:800}
+    .auth-field input{
+      width:100%;height:48px;padding:0 13px;border:1px solid var(--line);border-radius:13px;
+      background:#fffafc;color:var(--ink);outline:none;
+    }
+    .auth-field input:focus{border-color:#ff5f7a88;box-shadow:0 0 0 4px #ff5f7a12}
+    .auth-message{min-height:18px;margin:10px 2px 0;color:var(--danger);font-size:.66rem;line-height:1.4}
+    .forgot-button{
+      display:block;margin:13px auto 0;border:0;background:none;color:var(--purple);
+      font-size:.67rem;font-weight:850;
     }
     .view{display:none;animation:fade .2s ease}
     .view.active{display:block}
@@ -293,6 +332,11 @@
     .hidden{display:none!important}
     @media(max-width:420px){
       .app{padding-left:13px;padding-right:13px}
+      .topbar{gap:8px}
+      .brand{gap:8px}.brand-mark{width:40px;height:40px}
+      .brand p{display:none}
+      .saved-pill{padding:6px 8px;font-size:.56rem}
+      .logout-button{padding:0 7px;font-size:.56rem}
       .stats{gap:6px}.stat{padding:12px 9px}.stat b{font-size:.9rem}
       .drink-grid{grid-template-columns:repeat(4,1fr);gap:6px}
       .drink-option{min-height:55px;font-size:.53rem;padding:6px 3px}
@@ -305,6 +349,28 @@
   </style>
 </head>
 <body>
+  <section id="authScreen" class="auth-screen" aria-label="Acesso à conta">
+    <form id="loginForm" class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-mark">🍹</div>
+        <div><h1>Confesso que bebi</h1><p>Seus registros sincronizados em todos os aparelhos</p></div>
+      </div>
+      <h2>Entre na sua conta</h2>
+      <p class="auth-intro">Use o mesmo e-mail e senha no celular e no computador.</p>
+      <div class="auth-field">
+        <label for="loginEmail">E-mail</label>
+        <input id="loginEmail" type="email" autocomplete="email" required>
+      </div>
+      <div class="auth-field">
+        <label for="loginPassword">Senha</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" minlength="6" required>
+      </div>
+      <button id="loginButton" class="primary pink full" type="submit">Entrar</button>
+      <p id="authMessage" class="auth-message" role="alert"></p>
+      <button id="forgotPassword" class="forgot-button" type="button">Esqueci a senha</button>
+    </form>
+  </section>
+
   <div class="app">
     <header class="topbar">
       <div class="brand">
@@ -314,7 +380,10 @@
           <p>Um registro honesto, semana após semana</p>
         </div>
       </div>
-      <div class="saved-pill">Neste aparelho</div>
+      <div class="account-tools">
+        <div id="syncStatus" class="saved-pill syncing">Conectando</div>
+        <button id="logoutButton" class="logout-button" type="button">Sair</button>
+      </div>
     </header>
 
     <main>
@@ -439,7 +508,7 @@
     </main>
   </div>
 
-  <nav class="bottom-nav" aria-label="Navegação principal">
+  <nav id="bottomNav" class="bottom-nav" aria-label="Navegação principal">
     <button class="nav active" data-view="dashboard" type="button"><span>☀️</span>Semana</button>
     <button class="nav" data-view="register" type="button"><span>＋</span>Registrar</button>
     <button class="nav" data-view="history" type="button"><span>📊</span>Histórico</button>
@@ -447,9 +516,40 @@
 
   <div id="toast" class="toast" aria-live="polite"></div>
 
-  <script>
-    const STORAGE_KEY="confesso-que-bebi-v1";
-    const ATYPICAL_WEEKS_KEY="confesso-que-bebi-atypical-weeks-v1";
+  <script type="module">
+    import {initializeApp} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import {
+      getAuth,browserLocalPersistence,setPersistence,onAuthStateChanged,
+      signInWithEmailAndPassword,signOut,sendPasswordResetEmail
+    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+    import {
+      initializeFirestore,getFirestore,persistentLocalCache,persistentMultipleTabManager,
+      collection,doc,setDoc,deleteDoc,onSnapshot,writeBatch,serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+    const firebaseConfig={
+      apiKey:"AIzaSyCntynX1ZPUan8o1EAW0-QF00CNeQnMY5g",
+      authDomain:"confesso-que-bebi.firebaseapp.com",
+      projectId:"confesso-que-bebi",
+      storageBucket:"confesso-que-bebi.firebasestorage.app",
+      messagingSenderId:"324283589525",
+      appId:"1:324283589525:web:78a0bcc2f7b736a6f78c9c"
+    };
+
+    const firebaseApp=initializeApp(firebaseConfig);
+    const auth=getAuth(firebaseApp);
+    setPersistence(auth,browserLocalPersistence).catch(()=>{});
+    let db;
+    try{
+      db=initializeFirestore(firebaseApp,{
+        localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})
+      });
+    }catch{
+      db=getFirestore(firebaseApp);
+    }
+
+    const LEGACY_STORAGE_KEY="confesso-que-bebi-v1";
+    const LEGACY_ATYPICAL_WEEKS_KEY="confesso-que-bebi-atypical-weeks-v1";
     const STANDARD_GRAMS=10;
     const ALCOHOL_DENSITY=0.789;
 
@@ -526,56 +626,249 @@
       historyAverage:$("#historyAverage"),
       historyAverageDetail:$("#historyAverageDetail"),
       weekList:$("#weekList"),
-      toast:$("#toast")
+      toast:$("#toast"),
+      authScreen:$("#authScreen"),
+      loginForm:$("#loginForm"),
+      loginEmail:$("#loginEmail"),
+      loginPassword:$("#loginPassword"),
+      loginButton:$("#loginButton"),
+      authMessage:$("#authMessage"),
+      forgotPassword:$("#forgotPassword"),
+      syncStatus:$("#syncStatus"),
+      logoutButton:$("#logoutButton")
     };
 
-    let entries=loadEntries();
-    let atypicalWeeks=loadAtypicalWeeks();
+    let entries=[];
+    let atypicalWeeks=new Set();
+    let currentUser=null;
+    let entriesUnsubscribe=null;
+    let atypicalUnsubscribe=null;
+    let entriesSnapshotReady=false;
+    let atypicalSnapshotReady=false;
+    let entriesSnapshotMeta=null;
+    let atypicalSnapshotMeta=null;
     let selectedDrink="cerveja";
     let selectedWeekStart=startOfWeek(new Date());
     let toastTimer;
-
-    function loadEntries(){
-      try{
-        const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
-        return Array.isArray(parsed)?parsed.filter(validEntry).sort((a,b)=>b.datetime.localeCompare(a.datetime)):[];
-      }catch{
-        return[];
-      }
-    }
 
     function validEntry(item){
       return item&&typeof item.id==="string"&&typeof item.datetime==="string"&&Number.isFinite(Number(item.doses));
     }
 
-    function loadAtypicalWeeks(){
+    function readArray(key){
       try{
-        const parsed=JSON.parse(localStorage.getItem(ATYPICAL_WEEKS_KEY)||"[]");
-        return new Set(Array.isArray(parsed)?parsed.filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)):[]);
+        const parsed=JSON.parse(localStorage.getItem(key)||"[]");
+        return Array.isArray(parsed)?parsed:[];
       }catch{
-        return new Set();
+        return[];
       }
     }
 
+    function entriesCacheKey(uid){
+      return `confesso-que-bebi-v2:${uid}:entries`;
+    }
+
+    function atypicalCacheKey(uid){
+      return `confesso-que-bebi-v2:${uid}:atypical`;
+    }
+
+    function migrationKey(uid){
+      return `confesso-que-bebi-v2:${uid}:legacy-migrated`;
+    }
+
+    function loadUserCache(uid){
+      entries=readArray(entriesCacheKey(uid)).filter(validEntry).sort((a,b)=>b.datetime.localeCompare(a.datetime));
+      atypicalWeeks=new Set(readArray(atypicalCacheKey(uid)).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)));
+    }
+
+    function saveEntries(){
+      if(currentUser)localStorage.setItem(entriesCacheKey(currentUser.uid),JSON.stringify(entries));
+    }
+
     function saveAtypicalWeeks(){
-      localStorage.setItem(ATYPICAL_WEEKS_KEY,JSON.stringify([...atypicalWeeks].sort()));
+      if(currentUser)localStorage.setItem(atypicalCacheKey(currentUser.uid),JSON.stringify([...atypicalWeeks].sort()));
     }
 
     function isAtypicalWeek(value){
       return atypicalWeeks.has(weekKey(value));
     }
 
-    function setSelectedWeekAtypical(checked){
+    function setSyncStatus(label,state="ready"){
+      el.syncStatus.textContent=label;
+      el.syncStatus.classList.toggle("syncing",state==="syncing");
+      el.syncStatus.classList.toggle("offline",state==="offline");
+    }
+
+    function updateSyncStatus(){
+      if(!currentUser)return setSyncStatus("Desconectado","offline");
+      const metas=[entriesSnapshotMeta,atypicalSnapshotMeta].filter(Boolean);
+      const pending=metas.some(meta=>meta.hasPendingWrites);
+      const cacheOnly=metas.length&&metas.every(meta=>meta.fromCache);
+      if(pending)return setSyncStatus("Enviando...","syncing");
+      if(!navigator.onLine&&cacheOnly)return setSyncStatus("Sem internet","offline");
+      if(entriesSnapshotReady&&atypicalSnapshotReady)return setSyncStatus("Sincronizado");
+      setSyncStatus("Sincronizando...","syncing");
+    }
+
+    function entryDocument(item){
+      return{
+        datetime:String(item.datetime),
+        type:String(item.type||"outro"),
+        typeName:String(item.typeName||drinkById(item.type).name),
+        volume:Number(item.volume)||0,
+        abv:Number(item.abv)||0,
+        count:Number(item.count)||0,
+        grams:Number(item.grams)||0,
+        doses:Number(item.doses)||0,
+        createdAt:Number(item.createdAt)||Date.now(),
+        updatedAt:serverTimestamp()
+      };
+    }
+
+    function userEntriesCollection(uid=currentUser?.uid){
+      return collection(db,"users",uid,"drinkEntries");
+    }
+
+    function userAtypicalCollection(uid=currentUser?.uid){
+      return collection(db,"users",uid,"atypicalWeeks");
+    }
+
+    async function commitChunks(items,writer){
+      for(let index=0;index<items.length;index+=400){
+        const batch=writeBatch(db);
+        items.slice(index,index+400).forEach(item=>writer(batch,item));
+        await batch.commit();
+      }
+    }
+
+    async function migrateLegacyData(user){
+      if(localStorage.getItem(migrationKey(user.uid))==="1")return;
+      const legacyEntries=readArray(LEGACY_STORAGE_KEY).filter(validEntry);
+      const legacyAtypical=readArray(LEGACY_ATYPICAL_WEEKS_KEY).filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value));
+      try{
+        if(legacyEntries.length){
+          await commitChunks(legacyEntries,(batch,item)=>{
+            batch.set(doc(userEntriesCollection(user.uid),item.id),entryDocument(item),{merge:true});
+          });
+        }
+        if(legacyAtypical.length){
+          await commitChunks(legacyAtypical,(batch,key)=>{
+            batch.set(doc(userAtypicalCollection(user.uid),key),{key,atypical:true,updatedAt:serverTimestamp()},{merge:true});
+          });
+        }
+        localStorage.setItem(migrationKey(user.uid),"1");
+        localStorage.removeItem(LEGACY_STORAGE_KEY);
+        localStorage.removeItem(LEGACY_ATYPICAL_WEEKS_KEY);
+        if(legacyEntries.length||legacyAtypical.length){
+          toast("Registros deste aparelho enviados para sua conta.");
+        }
+      }catch(error){
+        console.error("Não foi possível migrar os registros locais",error);
+        toast("Não foi possível enviar os registros antigos agora.");
+      }
+    }
+
+    function stopCloudListeners(){
+      entriesUnsubscribe?.();
+      atypicalUnsubscribe?.();
+      entriesUnsubscribe=null;
+      atypicalUnsubscribe=null;
+      entriesSnapshotReady=false;
+      atypicalSnapshotReady=false;
+      entriesSnapshotMeta=null;
+      atypicalSnapshotMeta=null;
+    }
+
+    function startCloudListeners(user){
+      stopCloudListeners();
+      updateSyncStatus();
+      entriesUnsubscribe=onSnapshot(
+        userEntriesCollection(user.uid),
+        {includeMetadataChanges:true},
+        snapshot=>{
+          entriesSnapshotReady=true;
+          entriesSnapshotMeta=snapshot.metadata;
+          entries=snapshot.docs.map(item=>({id:item.id,...item.data()})).filter(validEntry).sort((a,b)=>b.datetime.localeCompare(a.datetime));
+          saveEntries();
+          renderAll();
+          updateSyncStatus();
+        },
+        error=>{
+          console.error("Erro ao sincronizar registros",error);
+          setSyncStatus("Falha ao sincronizar","offline");
+          toast("Não foi possível sincronizar os registros.");
+        }
+      );
+      atypicalUnsubscribe=onSnapshot(
+        userAtypicalCollection(user.uid),
+        {includeMetadataChanges:true},
+        snapshot=>{
+          atypicalSnapshotReady=true;
+          atypicalSnapshotMeta=snapshot.metadata;
+          atypicalWeeks=new Set(snapshot.docs.filter(item=>item.data().atypical!==false).map(item=>item.id));
+          saveAtypicalWeeks();
+          renderAll();
+          updateSyncStatus();
+        },
+        error=>{
+          console.error("Erro ao sincronizar semanas",error);
+          setSyncStatus("Falha ao sincronizar","offline");
+          toast("Não foi possível sincronizar as semanas.");
+        }
+      );
+    }
+
+    function startUserSession(user){
+      currentUser=user;
+      el.logoutButton.title=user.email||"Sair da conta";
+      loadUserCache(user.uid);
+      renderAll();
+      setSyncStatus("Sincronizando...","syncing");
+      const migration=migrateLegacyData(user);
+      startCloudListeners(user);
+      migration.finally(updateSyncStatus);
+      el.authScreen.classList.add("hidden");
+      el.authMessage.textContent="";
+      el.loginPassword.value="";
+    }
+
+    function endUserSession(){
+      stopCloudListeners();
+      currentUser=null;
+      entries=[];
+      atypicalWeeks=new Set();
+      renderAll();
+      setSyncStatus("Desconectado","offline");
+      el.authScreen.classList.remove("hidden");
+      el.loginPassword.value="";
+    }
+
+    async function setSelectedWeekAtypical(checked){
+      if(!currentUser)return;
       const key=weekKey(selectedWeekStart);
+      const previous=atypicalWeeks.has(key);
       if(checked)atypicalWeeks.add(key);
       else atypicalWeeks.delete(key);
       saveAtypicalWeeks();
       renderAll();
-      toast(checked?"Semana retirada da média.":"Semana incluída novamente na média.");
-    }
-
-    function saveEntries(){
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(entries));
+      setSyncStatus("Enviando...","syncing");
+      try{
+        const reference=doc(userAtypicalCollection(),key);
+        if(checked){
+          await setDoc(reference,{key,atypical:true,updatedAt:serverTimestamp()},{merge:true});
+        }else{
+          await deleteDoc(reference);
+        }
+        toast(checked?"Semana retirada da média.":"Semana incluída novamente na média.");
+      }catch(error){
+        if(previous)atypicalWeeks.add(key);
+        else atypicalWeeks.delete(key);
+        saveAtypicalWeeks();
+        renderAll();
+        updateSyncStatus();
+        console.error(error);
+        toast("Não foi possível atualizar a semana.");
+      }
     }
 
     function pad(number){
@@ -1079,14 +1372,27 @@
       reportWindow.focus();
     }
 
-    function deleteEntry(id){
+    async function deleteEntry(id){
+      if(!currentUser)return;
       const item=entries.find(entry=>entry.id===id);
       if(!item)return;
       if(!confirm(`Excluir o registro de ${item.typeName||drinkById(item.type).name}?`))return;
       entries=entries.filter(entry=>entry.id!==id);
       saveEntries();
       renderAll();
-      toast("Registro excluído.");
+      setSyncStatus("Enviando...","syncing");
+      try{
+        await deleteDoc(doc(userEntriesCollection(),id));
+        toast("Registro excluído.");
+      }catch(error){
+        entries.unshift(item);
+        entries.sort((a,b)=>b.datetime.localeCompare(a.datetime));
+        saveEntries();
+        renderAll();
+        updateSyncStatus();
+        console.error(error);
+        toast("Não foi possível excluir o registro.");
+      }
     }
 
     function switchView(id){
@@ -1113,6 +1419,7 @@
 
     el.drinkForm.addEventListener("submit",event=>{
       event.preventDefault();
+      if(!currentUser)return toast("Entre na conta para registrar.");
       const volume=effectiveVolume();
       const abv=effectiveAbv();
       const count=Number(el.count.value);
@@ -1122,7 +1429,7 @@
 
       const drink=drinkById(selectedDrink);
       const result=calculate(volume,abv,count);
-      entries.unshift({
+      const item={
         id:crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`,
         datetime,
         type:selectedDrink,
@@ -1133,7 +1440,8 @@
         grams:result.grams,
         doses:result.doses,
         createdAt:Date.now()
-      });
+      };
+      entries.unshift(item);
       entries.sort((a,b)=>b.datetime.localeCompare(a.datetime));
       saveEntries();
       renderAll();
@@ -1142,6 +1450,15 @@
       updatePreview();
       switchView("dashboard");
       toast("Bebida registrada.");
+      setSyncStatus("Enviando...","syncing");
+      setDoc(doc(userEntriesCollection(),item.id),entryDocument(item),{merge:true}).catch(error=>{
+        entries=entries.filter(entry=>entry.id!==item.id);
+        saveEntries();
+        renderAll();
+        updateSyncStatus();
+        console.error(error);
+        toast("Não foi possível salvar o registro.");
+      });
     });
 
     $("#minusCount").onclick=()=>{
@@ -1170,9 +1487,70 @@
     $("#showAllHistory").onclick=()=>switchView("history");
     $$(".nav").forEach(button=>button.onclick=()=>switchView(button.dataset.view));
 
+    el.loginForm.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const email=el.loginEmail.value.trim();
+      const password=el.loginPassword.value;
+      if(!email||!password)return;
+      el.loginButton.disabled=true;
+      el.loginButton.textContent="Entrando...";
+      el.authMessage.textContent="";
+      try{
+        await signInWithEmailAndPassword(auth,email,password);
+        localStorage.setItem("confesso-que-bebi-last-email",email);
+      }catch(error){
+        const messages={
+          "auth/invalid-email":"Digite um e-mail válido.",
+          "auth/invalid-credential":"E-mail ou senha incorretos.",
+          "auth/user-disabled":"Esta conta está desativada.",
+          "auth/too-many-requests":"Muitas tentativas. Aguarde um pouco e tente novamente.",
+          "auth/network-request-failed":"Não foi possível acessar a internet."
+        };
+        el.authMessage.textContent=messages[error.code]||"Não foi possível entrar. Confira os dados.";
+      }finally{
+        el.loginButton.disabled=false;
+        el.loginButton.textContent="Entrar";
+      }
+    });
+
+    el.forgotPassword.addEventListener("click",async()=>{
+      const email=el.loginEmail.value.trim();
+      if(!email){
+        el.authMessage.textContent="Digite seu e-mail para receber a redefinição de senha.";
+        el.loginEmail.focus();
+        return;
+      }
+      try{
+        await sendPasswordResetEmail(auth,email);
+        el.authMessage.style.color="#168d78";
+        el.authMessage.textContent="Enviamos as instruções para seu e-mail.";
+        setTimeout(()=>{el.authMessage.style.color=""},3000);
+      }catch(error){
+        el.authMessage.textContent=error.code==="auth/invalid-email"?"Digite um e-mail válido.":"Não foi possível enviar a redefinição agora.";
+      }
+    });
+
+    el.logoutButton.addEventListener("click",async()=>{
+      if(!confirm("Sair da conta neste aparelho?"))return;
+      try{
+        await signOut(auth);
+      }catch{
+        toast("Não foi possível sair agora.");
+      }
+    });
+
+    window.addEventListener("online",updateSyncStatus);
+    window.addEventListener("offline",updateSyncStatus);
+
+    onAuthStateChanged(auth,user=>{
+      if(user)startUserSession(user);
+      else endUserSession();
+    });
+
     selectDrink("cerveja");
     el.consumedAt.value=toDatetimeLocal(new Date());
     el.consumedAt.max=toDatetimeLocal(new Date());
+    el.loginEmail.value=localStorage.getItem("confesso-que-bebi-last-email")||"";
     renderAll();
   </script>
 </body>
