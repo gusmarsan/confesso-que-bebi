@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ff5f7a">
-  <title>Confesso que bebi — criar usuário</title>
+  <title>Confesso que bebi — acesso sem senha</title>
   <meta name="description" content="Registro pessoal de consumo de bebidas com sincronização entre aparelhos">
   <style>
     :root{
@@ -375,13 +375,19 @@
 </head>
 <body>
   <section id="authScreen" class="auth-screen" aria-label="Acesso à conta">
-    <div class="auth-card">
+    <form id="emailAccessForm" class="auth-card">
       <div class="auth-brand">
         <div class="brand-mark">🍹</div>
         <div><h1>Confesso que bebi</h1><p>Seus registros sincronizados em todos os aparelhos</p></div>
       </div>
-      <h2>Acesse seus registros</h2>
-      <p class="auth-intro">Na primeira vez, crie o usuário com sua conta Google. Depois, use a mesma conta no celular e no computador.</p>
+
+      <h2>Acesse sem senha</h2>
+      <p class="auth-intro">Digite seu e-mail. Você receberá um link para criar ou acessar o usuário.</p>
+
+      <div class="auth-field">
+        <label for="accessEmail">E-mail</label>
+        <input id="accessEmail" type="email" autocomplete="email" inputmode="email" required>
+      </div>
 
       <button id="createUserButton" class="create-user-button" type="button">
         <span class="create-user-icon">＋</span>
@@ -390,14 +396,14 @@
 
       <div class="auth-divider"><span>ou</span></div>
 
-      <button id="googleLoginButton" class="google-button" type="button">
-        <span class="google-icon">G</span>
-        <span class="button-label">Entrar com Google</span>
+      <button id="emailLoginButton" class="google-button" type="button">
+        <span class="google-icon">✉</span>
+        <span class="button-label">Entrar</span>
       </button>
 
-      <p id="authMessage" class="auth-message" role="alert"></p>
-      <p class="auth-note">A criação e a entrada usam sua conta Google. O app não recebe nem armazena a senha.</p>
-    </div>
+      <p id="authMessage" class="auth-message" role="status"></p>
+      <p class="auth-note">Nos dois casos, enviaremos um link ao e-mail. No primeiro acesso, o usuário é criado automaticamente.</p>
+    </form>
   </section>
 
   <div class="app">
@@ -546,15 +552,15 @@
   <div id="toast" class="toast" aria-live="polite"></div>
 
   <script type="module">
-    import {initializeApp} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+    import {initializeApp} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import {
       getAuth,browserLocalPersistence,setPersistence,onAuthStateChanged,
-      GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,signOut
-    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+      sendSignInLinkToEmail,isSignInWithEmailLink,signInWithEmailLink,signOut
+    } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
     import {
       initializeFirestore,getFirestore,persistentLocalCache,persistentMultipleTabManager,
       collection,doc,setDoc,deleteDoc,onSnapshot,writeBatch,serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+    } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
     const firebaseConfig={
       apiKey:"AIzaSyCntynX1ZPUan8o1EAW0-QF00CNeQnMY5g",
@@ -657,8 +663,10 @@
       weekList:$("#weekList"),
       toast:$("#toast"),
       authScreen:$("#authScreen"),
+      emailAccessForm:$("#emailAccessForm"),
+      accessEmail:$("#accessEmail"),
       createUserButton:$("#createUserButton"),
-      googleLoginButton:$("#googleLoginButton"),
+      emailLoginButton:$("#emailLoginButton"),
       authMessage:$("#authMessage"),
       personalTagline:$("#personalTagline"),
       syncStatus:$("#syncStatus"),
@@ -1535,68 +1543,112 @@
     $("#showAllHistory").onclick=()=>switchView("history");
     $$(".nav").forEach(button=>button.onclick=()=>switchView(button.dataset.view));
 
-    const googleProvider=new GoogleAuthProvider();
-    googleProvider.setCustomParameters({prompt:"select_account"});
+    const EMAIL_STORAGE_KEY="confesso-que-bebi-email-link-address";
 
-    function setAuthButtonsBusy(activeButton,busy){
-      [el.createUserButton,el.googleLoginButton].forEach(button=>{
+    function cleanCurrentUrl(){
+      return `${location.origin}${location.pathname}`;
+    }
+
+    function setEmailButtonsBusy(activeButton,busy){
+      [el.createUserButton,el.emailLoginButton].forEach(button=>{
         button.disabled=busy;
       });
       if(activeButton){
         const label=activeButton.querySelector(".button-label");
         if(label){
           if(!label.dataset.original)label.dataset.original=label.textContent;
-          label.textContent=busy?"Aguarde...":label.dataset.original;
+          label.textContent=busy?"Enviando...":label.dataset.original;
         }
       }
     }
 
-    function authenticationMessage(error){
+    function emailLinkMessage(error){
       const messages={
-        "auth/popup-closed-by-user":"A entrada foi cancelada.",
-        "auth/cancelled-popup-request":"Aguarde a janela de acesso.",
-        "auth/account-exists-with-different-credential":"Este e-mail já está ligado a outro método de acesso.",
-        "auth/unauthorized-domain":"Autorize o domínio do GitHub nas configurações do Firebase.",
+        "auth/invalid-email":"Digite um e-mail válido.",
+        "auth/missing-email":"Digite seu e-mail.",
+        "auth/unauthorized-continue-uri":"O endereço do GitHub precisa estar autorizado no Firebase.",
+        "auth/operation-not-allowed":"Ative o acesso por link em Authentication → Método de login → E-mail/senha.",
         "auth/network-request-failed":"Não foi possível acessar a internet.",
-        "auth/operation-not-allowed":"Ative o método Google em Authentication → Método de login.",
-        "auth/popup-blocked":"O navegador bloqueou a janela de acesso."
+        "auth/invalid-action-code":"Este link expirou ou já foi usado. Peça um novo.",
+        "auth/expired-action-code":"Este link expirou. Peça um novo."
       };
-      return messages[error?.code]||"Não foi possível acessar sua conta Google.";
+      return messages[error?.code]||"Não foi possível concluir o acesso.";
     }
 
-    async function authenticateWithGoogle(intent,button){
-      setAuthButtonsBusy(button,true);
+    async function sendAccessLink(intent,button){
+      const email=el.accessEmail.value.trim().toLowerCase();
+      if(!email){
+        el.authMessage.textContent="Digite seu e-mail.";
+        el.accessEmail.focus();
+        return;
+      }
+
+      setEmailButtonsBusy(button,true);
       el.authMessage.textContent="";
-      sessionStorage.setItem("confesso-que-bebi-auth-intent",intent);
+
       try{
-        const result=await signInWithPopup(auth,googleProvider);
-        const info=getAdditionalUserInfo(result);
-        if(intent==="create"){
-          toast(info?.isNewUser?"Usuário criado.":"Este usuário já existia. Você entrou normalmente.");
-        }
+        const actionCodeSettings={
+          url:cleanCurrentUrl(),
+          handleCodeInApp:true
+        };
+
+        await sendSignInLinkToEmail(auth,email,actionCodeSettings);
+        localStorage.setItem(EMAIL_STORAGE_KEY,email);
+        localStorage.setItem("confesso-que-bebi-auth-intent",intent);
+        el.authMessage.textContent=`Enviamos um link para ${email}. Abra o e-mail e toque no link.`;
       }catch(error){
-        if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment"].includes(error.code)){
-          try{
-            await signInWithRedirect(auth,googleProvider);
-            return;
-          }catch(redirectError){
-            el.authMessage.textContent=authenticationMessage(redirectError);
-          }
-        }else{
-          el.authMessage.textContent=authenticationMessage(error);
-        }
+        console.error(error);
+        el.authMessage.textContent=emailLinkMessage(error);
       }finally{
-        setAuthButtonsBusy(button,false);
+        setEmailButtonsBusy(button,false);
       }
     }
 
     el.createUserButton.addEventListener("click",()=>{
-      authenticateWithGoogle("create",el.createUserButton);
+      sendAccessLink("create",el.createUserButton);
     });
 
-    el.googleLoginButton.addEventListener("click",()=>{
-      authenticateWithGoogle("login",el.googleLoginButton);
+    el.emailLoginButton.addEventListener("click",()=>{
+      sendAccessLink("login",el.emailLoginButton);
     });
+
+    el.emailAccessForm.addEventListener("submit",event=>{
+      event.preventDefault();
+      sendAccessLink("login",el.emailLoginButton);
+    });
+
+    async function finishEmailLinkAccess(){
+      if(!isSignInWithEmailLink(auth,window.location.href))return;
+
+      let email=localStorage.getItem(EMAIL_STORAGE_KEY)||"";
+      if(!email){
+        email=window.prompt("Confirme o e-mail usado para pedir o link:")?.trim().toLowerCase()||"";
+      }
+
+      if(!email){
+        el.authMessage.textContent="Digite o mesmo e-mail usado para pedir o link.";
+        return;
+      }
+
+      el.authMessage.textContent="Concluindo o acesso...";
+
+      try{
+        await signInWithEmailLink(auth,email,window.location.href);
+        localStorage.setItem(EMAIL_STORAGE_KEY,email);
+        el.accessEmail.value=email;
+
+        const intent=localStorage.getItem("confesso-que-bebi-auth-intent");
+        if(intent==="create"){
+          toast("Usuário criado ou acessado.");
+        }
+
+        localStorage.removeItem("confesso-que-bebi-auth-intent");
+        history.replaceState({},document.title,cleanCurrentUrl());
+      }catch(error){
+        console.error(error);
+        el.authMessage.textContent=emailLinkMessage(error);
+      }
+    }
 
     el.logoutButton.addEventListener("click",async()=>{
       if(!confirm("Sair da conta neste aparelho?"))return;
@@ -1615,19 +1667,9 @@
       else endUserSession();
     });
 
-    getRedirectResult(auth)
-      .then(result=>{
-        if(!result)return;
-        const intent=sessionStorage.getItem("confesso-que-bebi-auth-intent");
-        const info=getAdditionalUserInfo(result);
-        if(intent==="create"){
-          toast(info?.isNewUser?"Usuário criado.":"Este usuário já existia. Você entrou normalmente.");
-        }
-        sessionStorage.removeItem("confesso-que-bebi-auth-intent");
-      })
-      .catch(error=>{
-        el.authMessage.textContent=authenticationMessage(error);
-      });
+
+    el.accessEmail.value=localStorage.getItem(EMAIL_STORAGE_KEY)||"";
+    finishEmailLinkAccess();
 
     selectDrink("cerveja");
     el.consumedAt.value=toDatetimeLocal(new Date());
