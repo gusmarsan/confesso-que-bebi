@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ff5f7a">
+  <title>Confesso que bebi</title>
+  <style>
+    :root{
+      --ink:#2d2540;
+      --muted:#776f88;
+      --paper:#fffaf5;
+      --card:#ffffff;
+      --line:#eee5ed;
+      --pink:#ff5f7a;
+      --pink-dark:#df3f61;
+      --purple:#8158e8;
+      --yellow:#ffd166;
+      --mint:#48d7bd;
+      --blue:#5b9df9;
+      --danger:#d7415d;
+      --shadow:0 18px 45px rgba(79,49,93,.12);
+      --nav-h:76px;
+    }
+    *{box-sizing:border-box}
+    html{background:var(--paper)}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 0 0,rgba(255,209,102,.27),transparent 30%),
+        radial-gradient(circle at 100% 10%,rgba(129,88,232,.14),transparent 28%),
+        var(--paper);
+      color:var(--ink);
+      font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+    button,input{font:inherit}
+    button{cursor:pointer}
+    button:disabled{cursor:not-allowed;opacity:.58}
+    .app{width:min(100%,720px);margin:0 auto;padding:0 16px calc(var(--nav-h) + 30px)}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      padding:22px 2px 16px;
+    }
+    .brand{display:flex;align-items:center;gap:11px}
+    .brand-mark{
+      width:44px;height:44px;display:grid;place-items:center;border-radius:15px;
+      background:linear-gradient(135deg,var(--pink),#ff8f70);
+      box-shadow:0 10px 25px rgba(255,95,122,.28);
+      color:#fff;font-size:1.35rem;
+    }
+    .brand h1{margin:0;font-size:1.08rem;letter-spacing:-.02em}
+    .brand p{margin:3px 0 0;color:var(--muted);font-size:.69rem}
+    .saved-pill{
+      padding:7px 10px;border:1px solid #48d7bd42;border-radius:999px;
+      background:#48d7bd12;color:#168d78;font-size:.63rem;font-weight:800;
+    }
+    .view{display:none;animation:fade .2s ease}
+    .view.active{display:block}
+    @keyframes fade{from{opacity:.25;transform:translateY(4px)}to{opacity:1;transform:none}}
+    .hero{
+      position:relative;overflow:hidden;padding:22px;border-radius:25px;
+      background:linear-gradient(135deg,#ff5677 0%,#ff7b66 48%,#ffbb5c 100%);
+      color:#fff;box-shadow:0 20px 50px rgba(255,95,122,.24);
+    }
+    .hero:before,.hero:after{
+      content:"";position:absolute;border-radius:50%;background:#fff2;
+    }
+    .hero:before{width:145px;height:145px;right:-65px;top:-55px}
+    .hero:after{width:90px;height:90px;right:45px;bottom:-58px}
+    .hero-label{position:relative;margin:0 0 6px;font-size:.72rem;font-weight:800;opacity:.9}
+    .week-range{position:relative;margin:0 0 17px;font-size:.7rem;opacity:.82}
+    .dose-total{position:relative;display:flex;align-items:flex-end;gap:8px}
+    .dose-total strong{font-size:3.35rem;line-height:.86;letter-spacing:-.065em}
+    .dose-total span{padding-bottom:4px;font-size:.88rem;font-weight:800}
+    .hero-foot{
+      position:relative;display:flex;align-items:center;justify-content:space-between;
+      gap:12px;margin-top:20px;padding-top:15px;border-top:1px solid #ffffff42;
+      font-size:.67rem;
+    }
+    .hero-foot b{font-size:.74rem}
+    .hero-actions{display:flex;align-items:center;gap:7px}
+    .hero-action{
+      min-height:38px;padding:0 11px;border:1px solid #ffffff55;border-radius:12px;
+      background:#ffffff1c;color:#fff;font-size:.62rem;font-weight:850;
+    }
+    .week-navigation{
+      display:grid;grid-template-columns:42px 1fr 42px;align-items:center;gap:8px;
+      margin:14px 0 11px;
+    }
+    .week-navigation button{
+      width:42px;height:42px;border:1px solid var(--line);border-radius:13px;
+      background:#fff;color:var(--purple);font-size:1.08rem;font-weight:900;
+      box-shadow:0 8px 20px rgba(79,49,93,.06);
+    }
+    .week-navigation button:disabled{color:#c7bdca;background:#faf7fa}
+    .week-navigation div{text-align:center}
+    .week-navigation b{display:block;font-size:.77rem}
+    .week-navigation span{display:block;margin-top:3px;color:var(--muted);font-size:.61rem}
+    .atypical-control{
+      display:flex;align-items:center;justify-content:flex-end;gap:6px;
+      margin:-3px 3px 12px;padding:0;color:var(--muted);
+      font-size:.62rem;font-weight:750;
+    }
+    .atypical-control input{
+      width:15px;height:15px;margin:0;accent-color:var(--purple);
+    }
+    .atypical-control.active{color:var(--purple)}
+    .average-note{
+      display:block;margin-top:4px;color:var(--muted);font-size:.54rem;line-height:1.25;
+    }
+    .week-card.atypical{border-color:#8158e845;background:#fbf9ff}
+    .atypical-tag{
+      padding:5px 8px;border-radius:999px;background:#8158e812;
+      color:var(--purple);font-size:.58rem;font-weight:850;
+    }
+    .week-card{cursor:pointer}
+    .week-card:focus-visible{outline:3px solid #8158e835;outline-offset:2px}
+    .report-hint{
+      margin:10px 2px 0;color:var(--muted);font-size:.62rem;line-height:1.4;text-align:center;
+    }
+    .primary{
+      min-height:44px;border:0;border-radius:14px;padding:0 16px;
+      background:var(--ink);color:#fff;font-weight:850;
+      box-shadow:0 10px 24px rgba(45,37,64,.18);
+    }
+    .primary.pink{background:linear-gradient(135deg,var(--pink),var(--pink-dark))}
+    .primary.full{width:100%}
+    .secondary{
+      min-height:42px;border:1px solid var(--line);border-radius:13px;padding:0 15px;
+      background:#fff;color:var(--ink);font-weight:800;
+    }
+    .stats{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0 20px;
+    }
+    .stat{
+      min-width:0;padding:14px 12px;border:1px solid var(--line);border-radius:18px;
+      background:rgba(255,255,255,.86);box-shadow:0 10px 30px rgba(79,49,93,.06);
+    }
+    .stat span{display:block;color:var(--muted);font-size:.61rem;font-weight:750;line-height:1.3}
+    .stat b{display:block;margin-top:7px;font-size:1.02rem;letter-spacing:-.03em;overflow-wrap:anywhere}
+    .section-head{
+      display:flex;align-items:end;justify-content:space-between;gap:14px;margin:22px 2px 11px;
+    }
+    .section-head h2{margin:0;font-size:1rem;letter-spacing:-.025em}
+    .section-head p{margin:4px 0 0;color:var(--muted);font-size:.67rem}
+    .link-button{border:0;background:none;color:var(--pink-dark);font-size:.69rem;font-weight:850}
+    .day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+    .day{
+      --fill:0%;
+      position:relative;isolation:isolate;overflow:hidden;
+      min-height:82px;padding:10px 3px;border:1px solid var(--line);border-radius:15px;
+      background:#fff;text-align:center;
+    }
+    .day::before{
+      content:"";position:absolute;z-index:-1;left:0;right:0;bottom:0;height:var(--fill);
+      background:linear-gradient(180deg,#ffeaa8,#ffd166);
+      transition:height .35s ease;
+    }
+    .day.today{border-color:#ff5f7a70;box-shadow:0 0 0 3px #ff5f7a10}
+    .day.limit-day{border-color:#e6d69c}
+    .day.over-limit{border-color:#ff7b7b;background:#fff5f5}
+    .day-name{display:block;color:var(--muted);font-size:.57rem;font-weight:850;text-transform:uppercase}
+    .day-number{display:block;margin:5px 0 8px;font-size:.76rem;font-weight:850}
+    .day-dose{display:block;color:var(--pink-dark);font-size:.62rem;font-weight:850}
+    .day-limit{display:block;margin-top:3px;color:#8d7941;font-size:.5rem;font-weight:800}
+    .day-over{display:block;margin-top:3px;color:var(--danger);font-size:.48rem;font-weight:900;text-transform:uppercase}
+    .empty{
+      padding:28px 20px;border:1px dashed #d9ccd9;border-radius:20px;background:#ffffff88;
+      color:var(--muted);font-size:.76rem;line-height:1.5;text-align:center;
+    }
+    .entry-list{display:grid;gap:9px}
+    .entry{
+      display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:center;
+      padding:12px;border:1px solid var(--line);border-radius:18px;background:#fff;
+      box-shadow:0 8px 24px rgba(79,49,93,.05);
+    }
+    .entry-icon{
+      width:42px;height:42px;display:grid;place-items:center;border-radius:14px;
+      background:#fff1f4;font-size:1.15rem;
+    }
+    .entry-main{min-width:0}
+    .entry-main b{display:block;font-size:.77rem}
+    .entry-main span{display:block;margin-top:4px;color:var(--muted);font-size:.64rem;line-height:1.35}
+    .entry-side{text-align:right}
+    .entry-side b{display:block;color:var(--pink-dark);font-size:.79rem}
+    .entry-side span{display:block;margin-top:3px;color:var(--muted);font-size:.59rem}
+    .delete-entry{
+      display:block;margin:7px 0 0 auto;padding:2px;border:0;background:none;
+      color:#a69bab;font-size:.58rem;text-decoration:underline;
+    }
+    .page-title{margin:3px 2px 18px}
+    .page-title p{margin:0 0 4px;color:var(--pink-dark);font-size:.66rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
+    .page-title h2{margin:0;font-size:1.55rem;letter-spacing:-.045em}
+    .card{
+      padding:18px;border:1px solid var(--line);border-radius:22px;background:#fff;
+      box-shadow:var(--shadow);
+    }
+    .field{margin-bottom:14px}
+    .field label{display:block;margin:0 0 7px;color:var(--muted);font-size:.68rem;font-weight:800}
+    .field input,.field select{
+      width:100%;height:47px;padding:0 13px;border:1px solid var(--line);border-radius:13px;
+      background:#fffafc;color:var(--ink);outline:none;
+    }
+    .field select{
+      appearance:auto;
+      cursor:pointer;
+    }
+    .field input:focus,.field select:focus{border-color:#ff5f7a88;box-shadow:0 0 0 4px #ff5f7a12}
+    .shortcut-note{display:block;margin-top:5px;color:var(--muted);font-size:.57rem;line-height:1.35}
+    .drink-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:17px}
+    .drink-option{
+      min-height:58px;padding:7px 4px;border:1px solid var(--line);border-radius:14px;
+      background:#fff;color:var(--ink);font-size:.56rem;font-weight:800;line-height:1.15;
+    }
+    .drink-option span{display:block;margin-bottom:3px;font-size:1.05rem}
+    .drink-option.selected{
+      border-color:#ff5f7a90;background:linear-gradient(145deg,#fff0f3,#fff8e9);
+      color:var(--pink-dark);box-shadow:0 8px 20px #ff5f7a12;
+    }
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .counter{
+      display:grid;grid-template-columns:46px 1fr 46px;align-items:center;gap:9px;
+    }
+    .counter button{
+      height:46px;border:1px solid var(--line);border-radius:13px;background:#fff;
+      color:var(--purple);font-size:1.25rem;font-weight:900;
+    }
+    .counter input{text-align:center;font-weight:900}
+    .preview{
+      margin:5px 0 15px;padding:17px;border-radius:18px;
+      background:linear-gradient(135deg,#8058e8,#5b9df9);color:#fff;
+    }
+    .preview span{display:block;font-size:.67rem;font-weight:800;opacity:.85}
+    .preview strong{display:block;margin:6px 0 4px;font-size:1.65rem;letter-spacing:-.045em}
+    .preview small{font-size:.64rem;opacity:.8}
+    .formula-note{
+      margin:13px 2px 0;color:var(--muted);font-size:.62rem;line-height:1.45;text-align:center;
+    }
+    .history-hero{
+      padding:18px;border-radius:22px;background:linear-gradient(135deg,#7357d9,#9e71ec);
+      color:#fff;box-shadow:0 18px 42px rgba(129,88,232,.22);
+    }
+    .history-hero span{display:block;font-size:.68rem;font-weight:750;opacity:.82}
+    .history-hero strong{display:block;margin:7px 0 3px;font-size:2.15rem;letter-spacing:-.05em}
+    .history-hero small{font-size:.65rem;opacity:.77}
+    .week-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    .week-card{
+      min-height:145px;padding:14px;border:1px solid var(--line);border-radius:19px;background:#fff;
+      box-shadow:0 8px 25px rgba(79,49,93,.05);
+      display:flex;flex-direction:column;
+    }
+    .week-top{display:block}
+    .week-top b{display:block;font-size:.72rem}
+    .week-top span{display:block;margin-top:5px;color:var(--muted);font-size:.58rem;line-height:1.35}
+    .week-total{margin-top:auto;padding-top:12px;text-align:left}
+    .week-total strong{display:block;color:var(--purple);font-size:1.35rem;letter-spacing:-.04em}
+    .week-total small{color:var(--muted);font-size:.56rem}
+    .week-records{display:block;margin-top:5px;color:var(--muted);font-size:.55rem}
+    .bar{height:7px;margin:10px 0 0;border-radius:999px;background:#f2eaf4;overflow:hidden}
+    .bar i{display:block;height:100%;min-width:0;border-radius:inherit;background:linear-gradient(90deg,var(--pink),var(--yellow))}
+    .week-breakdown{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+    .tag{padding:5px 8px;border-radius:999px;background:#fff3e2;color:#76552a;font-size:.58rem;font-weight:800}
+    .zero-week .bar i{width:0!important}
+    .zero-week .week-total strong{color:var(--mint)}
+    .drink-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .drink-summary-card{
+      padding:12px;border:1px solid var(--line);border-radius:16px;background:#fff;
+      box-shadow:0 7px 20px rgba(79,49,93,.04);
+    }
+    .drink-summary-card span{display:block;font-size:1.05rem}
+    .drink-summary-card b{display:block;margin-top:5px;font-size:.7rem}
+    .drink-summary-card small{display:block;margin-top:4px;color:var(--muted);font-size:.57rem;line-height:1.35}
+    .bottom-nav{
+      position:fixed;z-index:100;left:50%;bottom:0;transform:translateX(-50%);
+      width:min(100%,720px);height:var(--nav-h);display:grid;grid-template-columns:repeat(3,1fr);
+      padding:7px 12px max(7px,env(safe-area-inset-bottom));border-top:1px solid var(--line);
+      background:rgba(255,250,245,.94);backdrop-filter:blur(18px);
+    }
+    .nav{
+      border:0;border-radius:15px;background:none;color:#8a8193;font-size:.61rem;font-weight:800;
+    }
+    .nav span{display:block;margin-bottom:4px;font-size:1.15rem}
+    .nav.active{background:#fff;color:var(--pink-dark);box-shadow:0 8px 20px rgba(79,49,93,.08)}
+    .toast{
+      position:fixed;z-index:200;left:50%;bottom:calc(var(--nav-h) + 17px);
+      transform:translate(-50%,20px);max-width:calc(100% - 32px);padding:11px 15px;
+      border-radius:13px;background:var(--ink);color:#fff;font-size:.7rem;font-weight:750;
+      opacity:0;pointer-events:none;transition:.22s;
+    }
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .hidden{display:none!important}
+    @media(max-width:420px){
+      .app{padding-left:13px;padding-right:13px}
+      .stats{gap:6px}.stat{padding:12px 9px}.stat b{font-size:.9rem}
+      .drink-grid{grid-template-columns:repeat(4,1fr);gap:6px}
+      .drink-option{min-height:55px;font-size:.53rem;padding:6px 3px}
+      .hero{padding:20px}.dose-total strong{font-size:3rem}
+      .week-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:350px){
+      .drink-grid{grid-template-columns:repeat(3,1fr)}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">🍹</div>
+        <div>
+          <h1>Confesso que bebi</h1>
+          <p>Um registro honesto, semana após semana</p>
+        </div>
+      </div>
+      <div class="saved-pill">Neste aparelho</div>
+    </header>
+
+    <main>
+      <section id="dashboard" class="view active">
+        <div class="hero">
+          <p class="hero-label">Doses nesta semana</p>
+          <p id="currentWeekRange" class="week-range"></p>
+          <div class="dose-total"><strong id="currentWeekDoses">0</strong><span>doses</span></div>
+          <div class="hero-foot">
+            <div><span>Álcool puro</span><br><b id="currentWeekGrams">0 g</b></div>
+            <div class="hero-actions">
+              <button id="weekReport" class="hero-action" type="button">Gerar relatório</button>
+              <button id="quickAdd" class="primary" type="button">Registrar bebida</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="week-navigation">
+          <button id="previousWeek" type="button" aria-label="Semana anterior">‹</button>
+          <div><b id="selectedWeekLabel">Semana atual</b><span id="selectedWeekDates"></span></div>
+          <button id="nextWeek" type="button" aria-label="Próxima semana">›</button>
+        </div>
+
+        <label id="atypicalControl" class="atypical-control">
+          <input id="atypicalWeek" type="checkbox">
+          <span>Semana atípica</span>
+        </label>
+
+        <div class="stats">
+          <article class="stat"><span>Registros na semana</span><b id="currentWeekEntries">0</b></article>
+          <article class="stat"><span>Média semanal</span><b id="weeklyAverage">0 doses</b><small id="averageExclusionNote" class="average-note"></small></article>
+          <article class="stat"><span>Semanas registradas</span><b id="weeksCount">0</b></article>
+        </div>
+
+        <div class="section-head">
+          <div><h2>De segunda a domingo</h2><p>Como as doses se distribuíram na semana</p></div>
+        </div>
+        <div id="dayGrid" class="day-grid"></div>
+
+        <div class="section-head">
+          <div><h2>Bebidas da semana</h2><p>Quantidade agrupada por tipo</p></div>
+        </div>
+        <div id="selectedWeekBreakdown" class="drink-summary-grid"></div>
+
+        <div class="section-head">
+          <div><h2>Registros da semana</h2><p>Detalhes de cada bebida adicionada</p></div>
+          <button id="showAllHistory" class="link-button" type="button">Conferir semanas</button>
+        </div>
+        <div id="recentEntries" class="entry-list"></div>
+      </section>
+
+      <section id="register" class="view">
+        <div class="page-title">
+          <p>Novo registro</p>
+          <h2>O que você bebeu?</h2>
+        </div>
+
+        <form id="drinkForm" class="card">
+          <div class="field">
+            <label>Tipo de bebida</label>
+            <div id="drinkGrid" class="drink-grid"></div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="volume">Volume por unidade</label>
+              <select id="volumePreset" class="hidden" aria-label="Atalho de volume"></select>
+              <input id="volume" type="number" min="1" max="5000" step="1" inputmode="decimal" required>
+              <small id="volumeShortcutNote" class="shortcut-note hidden">Escolha um tamanho ou selecione Outro volume.</small>
+            </div>
+            <div class="field">
+              <label for="abv">Teor alcoólico (%)</label>
+              <select id="abvPreset" class="hidden" aria-label="Atalho de teor alcoólico"></select>
+              <input id="abv" type="number" min="0.1" max="100" step="0.1" inputmode="decimal" required>
+              <small id="abvShortcutNote" class="shortcut-note hidden">Escolha o teor ou selecione Outro teor.</small>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="count">Quantidade consumida</label>
+            <div class="counter">
+              <button id="minusCount" type="button" aria-label="Diminuir quantidade">−</button>
+              <input id="count" type="number" min="0.25" max="100" step="0.25" value="1" inputmode="decimal" required>
+              <button id="plusCount" type="button" aria-label="Aumentar quantidade">+</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="consumedAt">Data e horário</label>
+            <input id="consumedAt" type="datetime-local" required>
+          </div>
+
+          <div class="preview">
+            <span>Este registro equivale a aproximadamente</span>
+            <strong id="dosePreview">0 doses</strong>
+            <small id="gramsPreview">0 g de álcool puro</small>
+          </div>
+
+          <button class="primary pink full" type="submit">Adicionar ao registro</button>
+          <p class="formula-note">Para o contador, 1 dose-padrão equivale a 10 g de álcool puro. O cálculo é uma estimativa e não deve ser usado para decidir se é seguro dirigir.</p>
+        </form>
+      </section>
+
+      <section id="history" class="view">
+        <div class="page-title">
+          <p>Semana após semana</p>
+          <h2>Seu histórico</h2>
+        </div>
+
+        <div class="history-hero">
+          <span>Média das semanas desde o primeiro registro</span>
+          <strong id="historyAverage">0 doses</strong>
+          <small id="historyAverageDetail">Nenhuma semana registrada</small>
+        </div>
+
+        <div class="section-head">
+          <div><h2>Resumo semanal</h2><p>Semanas de segunda a domingo, incluindo as semanas com zero</p></div>
+        </div>
+        <div id="weekList" class="week-list"></div>
+        <p class="report-hint">Toque em uma semana para abri-la na tela principal.</p>
+      </section>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Navegação principal">
+    <button class="nav active" data-view="dashboard" type="button"><span>☀️</span>Semana</button>
+    <button class="nav" data-view="register" type="button"><span>＋</span>Registrar</button>
+    <button class="nav" data-view="history" type="button"><span>📊</span>Histórico</button>
+  </nav>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script>
+    const STORAGE_KEY="confesso-que-bebi-v1";
+    const ATYPICAL_WEEKS_KEY="confesso-que-bebi-atypical-weeks-v1";
+    const STANDARD_GRAMS=10;
+    const ALCOHOL_DENSITY=0.789;
+
+    const DRINKS=[
+      {id:"cerveja",name:"Cerveja",emoji:"🍺",volume:350,abv:5},
+      {id:"vinho-tinto",name:"Vinho tinto",emoji:"🍷",volume:150,abv:13},
+      {id:"vinho-branco",name:"Vinho branco",emoji:"🥂",volume:150,abv:12},
+      {id:"espumante",name:"Espumante",emoji:"🍾",volume:125,abv:12},
+      {id:"cachaca",name:"Cachaça",emoji:"🥃",volume:50,abv:40},
+      {id:"vodka",name:"Vodka",emoji:"🧊",volume:50,abv:40},
+      {id:"whisky",name:"Whisky",emoji:"🥃",volume:50,abv:40},
+      {id:"gin",name:"Gin",emoji:"🍸",volume:50,abv:40},
+      {id:"campari",name:"Campari",emoji:"🔴",volume:50,abv:25},
+      {id:"xeque-mate",name:"Xeque-Mate",emoji:"♟️",volume:365,abv:7.9},
+      {id:"bebida-estranha",name:"Bebida estranha",emoji:"🧪",volume:100,abv:15},
+      {id:"outro",name:"Outro",emoji:"✨",volume:100,abv:10}
+    ];
+
+    const DAY_LIMITS={
+      4:12,
+      5:25,
+      6:13
+    };
+
+    const BEER_VOLUME_PRESETS=[
+      {label:"Copo americano",value:190},
+      {label:"Lata/copo normal",value:350},
+      {label:"Caneca",value:400},
+      {label:"Latão",value:475},
+      {label:"Canecão/garrafa alemã",value:500},
+      {label:"Garrafa",value:600}
+    ];
+
+    const WINE_VOLUME_PRESETS=[
+      {label:"1/3 da taça",value:120},
+      {label:"1/2 da taça",value:180},
+      {label:"Garrafa pequena",value:185},
+      {label:"Garrafa grande",value:700}
+    ];
+
+    const BEER_ABV_PRESETS=[3.5,4,4.5,5,5.5,6,7,8,9];
+
+    const $=selector=>document.querySelector(selector);
+    const $$=selector=>[...document.querySelectorAll(selector)];
+    const el={
+      currentWeekRange:$("#currentWeekRange"),
+      selectedWeekLabel:$("#selectedWeekLabel"),
+      selectedWeekDates:$("#selectedWeekDates"),
+      previousWeek:$("#previousWeek"),
+      nextWeek:$("#nextWeek"),
+      atypicalControl:$("#atypicalControl"),
+      atypicalWeek:$("#atypicalWeek"),
+      averageExclusionNote:$("#averageExclusionNote"),
+      currentWeekDoses:$("#currentWeekDoses"),
+      currentWeekGrams:$("#currentWeekGrams"),
+      currentWeekEntries:$("#currentWeekEntries"),
+      weeklyAverage:$("#weeklyAverage"),
+      weeksCount:$("#weeksCount"),
+      dayGrid:$("#dayGrid"),
+      selectedWeekBreakdown:$("#selectedWeekBreakdown"),
+      recentEntries:$("#recentEntries"),
+      drinkForm:$("#drinkForm"),
+      drinkGrid:$("#drinkGrid"),
+      volumePreset:$("#volumePreset"),
+      volume:$("#volume"),
+      volumeShortcutNote:$("#volumeShortcutNote"),
+      abvPreset:$("#abvPreset"),
+      abv:$("#abv"),
+      abvShortcutNote:$("#abvShortcutNote"),
+      count:$("#count"),
+      consumedAt:$("#consumedAt"),
+      dosePreview:$("#dosePreview"),
+      gramsPreview:$("#gramsPreview"),
+      historyAverage:$("#historyAverage"),
+      historyAverageDetail:$("#historyAverageDetail"),
+      weekList:$("#weekList"),
+      toast:$("#toast")
+    };
+
+    let entries=loadEntries();
+    let atypicalWeeks=loadAtypicalWeeks();
+    let selectedDrink="cerveja";
+    let selectedWeekStart=startOfWeek(new Date());
+    let toastTimer;
+
+    function loadEntries(){
+      try{
+        const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]");
+        return Array.isArray(parsed)?parsed.filter(validEntry).sort((a,b)=>b.datetime.localeCompare(a.datetime)):[];
+      }catch{
+        return[];
+      }
+    }
+
+    function validEntry(item){
+      return item&&typeof item.id==="string"&&typeof item.datetime==="string"&&Number.isFinite(Number(item.doses));
+    }
+
+    function loadAtypicalWeeks(){
+      try{
+        const parsed=JSON.parse(localStorage.getItem(ATYPICAL_WEEKS_KEY)||"[]");
+        return new Set(Array.isArray(parsed)?parsed.filter(value=>/^\d{4}-\d{2}-\d{2}$/.test(value)):[]);
+      }catch{
+        return new Set();
+      }
+    }
+
+    function saveAtypicalWeeks(){
+      localStorage.setItem(ATYPICAL_WEEKS_KEY,JSON.stringify([...atypicalWeeks].sort()));
+    }
+
+    function isAtypicalWeek(value){
+      return atypicalWeeks.has(weekKey(value));
+    }
+
+    function setSelectedWeekAtypical(checked){
+      const key=weekKey(selectedWeekStart);
+      if(checked)atypicalWeeks.add(key);
+      else atypicalWeeks.delete(key);
+      saveAtypicalWeeks();
+      renderAll();
+      toast(checked?"Semana retirada da média.":"Semana incluída novamente na média.");
+    }
+
+    function saveEntries(){
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(entries));
+    }
+
+    function pad(number){
+      return String(number).padStart(2,"0");
+    }
+
+    function localDateKey(date){
+      return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`;
+    }
+
+    function toDatetimeLocal(date=new Date()){
+      return `${localDateKey(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function parseLocalDate(value){
+      const [datePart,timePart="00:00"]=String(value).split("T");
+      const [year,month,day]=datePart.split("-").map(Number);
+      const [hours,minutes]=timePart.split(":").map(Number);
+      return new Date(year,month-1,day,hours||0,minutes||0,0,0);
+    }
+
+    function startOfWeek(value){
+      const date=value instanceof Date?new Date(value):parseLocalDate(value);
+      date.setHours(0,0,0,0);
+      const offset=(date.getDay()+6)%7;
+      date.setDate(date.getDate()-offset);
+      return date;
+    }
+
+    function endOfWeek(value){
+      const date=startOfWeek(value);
+      date.setDate(date.getDate()+6);
+      date.setHours(23,59,59,999);
+      return date;
+    }
+
+    function addDays(date,days){
+      const result=new Date(date);
+      result.setDate(result.getDate()+days);
+      return result;
+    }
+
+    function weekKey(value){
+      return localDateKey(startOfWeek(value));
+    }
+
+    function formatNumber(value,digits=1){
+      return new Intl.NumberFormat("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:digits}).format(Number(value)||0);
+    }
+
+    function formatDate(date,options){
+      return new Intl.DateTimeFormat("pt-BR",options).format(date);
+    }
+
+    function formatShortDate(date){
+      return `${pad(date.getDate())}/${pad(date.getMonth()+1)}/${String(date.getFullYear()).slice(-2)}`;
+    }
+
+    function formatWeekRange(start){
+      return `${formatShortDate(start)} a ${formatShortDate(addDays(start,6))}`;
+    }
+
+    function drinkById(id){
+      return DRINKS.find(item=>item.id===id)||DRINKS.at(-1);
+    }
+
+    function calculate(volume,abv,count){
+      const grams=(Number(volume)||0)*(Number(count)||0)*((Number(abv)||0)/100)*ALCOHOL_DENSITY;
+      return{grams,doses:grams/STANDARD_GRAMS};
+    }
+
+    function groupCalendarWeeks(){
+      if(!entries.length)return[];
+      const firstEntry=entries.reduce((oldest,item)=>item.datetime<oldest.datetime?item:oldest,entries[0]);
+      const first=startOfWeek(firstEntry.datetime);
+      const current=startOfWeek(new Date());
+      const lastEntryWeek=startOfWeek(entries[0].datetime);
+      const end=lastEntryWeek>current?lastEntryWeek:current;
+      const groups=[];
+      for(let cursor=new Date(first);cursor<=end;cursor=addDays(cursor,7)){
+        const key=weekKey(cursor);
+        const weekEntries=entries.filter(item=>weekKey(item.datetime)===key);
+        groups.push({
+          key,
+          start:new Date(cursor),
+          end:endOfWeek(cursor),
+          entries:weekEntries,
+          doses:weekEntries.reduce((sum,item)=>sum+Number(item.doses||0),0),
+          grams:weekEntries.reduce((sum,item)=>sum+Number(item.grams||0),0),
+          atypical:atypicalWeeks.has(key)
+        });
+      }
+      return groups.sort((a,b)=>b.key.localeCompare(a.key));
+    }
+
+    function selectedWeekEntries(){
+      const key=weekKey(selectedWeekStart);
+      return entries.filter(item=>weekKey(item.datetime)===key);
+    }
+
+    function isCurrentSelectedWeek(){
+      return weekKey(selectedWeekStart)===weekKey(new Date());
+    }
+
+    function moveWeek(offset){
+      const next=addDays(selectedWeekStart,offset*7);
+      const current=startOfWeek(new Date());
+      if(next>current)return;
+      selectedWeekStart=startOfWeek(next);
+      renderDashboard();
+    }
+
+    function openWeek(start){
+      selectedWeekStart=startOfWeek(start);
+      switchView("dashboard");
+      renderDashboard();
+    }
+
+    function averageEligibleWeeks(groups=groupCalendarWeeks()){
+      return groups.filter(week=>!week.atypical);
+    }
+
+    function weeklyAverage(groups=groupCalendarWeeks()){
+      const eligible=averageEligibleWeeks(groups);
+      return eligible.length?eligible.reduce((sum,week)=>sum+week.doses,0)/eligible.length:0;
+    }
+
+    function renderDrinkOptions(){
+      el.drinkGrid.innerHTML="";
+      DRINKS.forEach(drink=>{
+        const button=document.createElement("button");
+        button.type="button";
+        button.className="drink-option"+(drink.id===selectedDrink?" selected":"");
+        button.dataset.drink=drink.id;
+        button.innerHTML=`<span>${drink.emoji}</span>${drink.name}`;
+        button.onclick=()=>selectDrink(drink.id);
+        el.drinkGrid.appendChild(button);
+      });
+    }
+
+    function setPresetOptions(select,options,currentValue,otherLabel){
+      select.innerHTML="";
+      options.forEach(option=>{
+        const element=document.createElement("option");
+        const value=typeof option==="number"?option:option.value;
+        const label=typeof option==="number"?`${formatNumber(option,1)}%`:option.label;
+        element.value=String(value);
+        element.textContent=label;
+        if(Number(value)===Number(currentValue))element.selected=true;
+        select.appendChild(element);
+      });
+      const other=document.createElement("option");
+      other.value="other";
+      other.textContent=otherLabel;
+      select.appendChild(other);
+    }
+
+    function usesBeerShortcuts(){
+      return selectedDrink==="cerveja";
+    }
+
+    function usesWineVolumeShortcuts(){
+      return selectedDrink==="vinho-tinto"||selectedDrink==="vinho-branco";
+    }
+
+    function configureDrinkShortcuts(drink){
+      const beer=usesBeerShortcuts();
+      const wine=usesWineVolumeShortcuts();
+
+      el.volumePreset.classList.toggle("hidden",!(beer||wine));
+      el.volumeShortcutNote.classList.toggle("hidden",!(beer||wine));
+      el.volume.classList.toggle("hidden",beer||wine);
+
+      el.abvPreset.classList.toggle("hidden",!beer);
+      el.abvShortcutNote.classList.toggle("hidden",!beer);
+      el.abv.classList.toggle("hidden",beer);
+
+      if(beer){
+        setPresetOptions(el.volumePreset,BEER_VOLUME_PRESETS,drink.volume,"Outro volume");
+        setPresetOptions(el.abvPreset,BEER_ABV_PRESETS,drink.abv,"Outro teor");
+        el.volume.value=drink.volume;
+        el.abv.value=drink.abv;
+      }else if(wine){
+        setPresetOptions(el.volumePreset,WINE_VOLUME_PRESETS,drink.volume,"Outro volume");
+        el.volume.value=drink.volume;
+        el.abv.value=drink.abv;
+      }else{
+        el.volume.value=drink.volume;
+        el.abv.value=drink.abv;
+      }
+    }
+
+    function effectiveVolume(){
+      if((usesBeerShortcuts()||usesWineVolumeShortcuts())&&el.volumePreset.value!=="other"){
+        return Number(el.volumePreset.value);
+      }
+      return Number(el.volume.value);
+    }
+
+    function effectiveAbv(){
+      if(usesBeerShortcuts()&&el.abvPreset.value!=="other"){
+        return Number(el.abvPreset.value);
+      }
+      return Number(el.abv.value);
+    }
+
+    function handleVolumePreset(){
+      const custom=el.volumePreset.value==="other";
+      el.volume.classList.toggle("hidden",!custom);
+      if(!custom)el.volume.value=el.volumePreset.value;
+      else setTimeout(()=>el.volume.focus(),20);
+      updatePreview();
+    }
+
+    function handleAbvPreset(){
+      const custom=el.abvPreset.value==="other";
+      el.abv.classList.toggle("hidden",!custom);
+      if(!custom)el.abv.value=el.abvPreset.value;
+      else setTimeout(()=>el.abv.focus(),20);
+      updatePreview();
+    }
+
+    function selectDrink(id){
+      selectedDrink=id;
+      const drink=drinkById(id);
+      configureDrinkShortcuts(drink);
+      renderDrinkOptions();
+      updatePreview();
+    }
+
+    function updatePreview(){
+      const result=calculate(effectiveVolume(),effectiveAbv(),el.count.value);
+      el.dosePreview.textContent=`${formatNumber(result.doses,2)} ${Math.abs(result.doses-1)<.005?"dose":"doses"}`;
+      el.gramsPreview.textContent=`${formatNumber(result.grams,1)} g de álcool puro`;
+    }
+
+    function renderDashboard(){
+      const start=startOfWeek(selectedWeekStart);
+      const weekEntries=selectedWeekEntries();
+      const doses=weekEntries.reduce((sum,item)=>sum+Number(item.doses||0),0);
+      const grams=weekEntries.reduce((sum,item)=>sum+Number(item.grams||0),0);
+      const groups=groupCalendarWeeks();
+      const eligible=averageEligibleWeeks(groups);
+      const excluded=groups.length-eligible.length;
+      const average=weeklyAverage(groups);
+      const current=isCurrentSelectedWeek();
+      const selectedAtypical=isAtypicalWeek(start);
+
+      el.currentWeekRange.textContent=formatWeekRange(start);
+      el.selectedWeekLabel.textContent=current?"Semana atual":"Semana selecionada";
+      el.selectedWeekDates.textContent=formatWeekRange(start);
+      el.nextWeek.disabled=current;
+      el.atypicalWeek.checked=selectedAtypical;
+      el.atypicalControl.classList.toggle("active",selectedAtypical);
+      el.currentWeekDoses.textContent=formatNumber(doses,2);
+      el.currentWeekGrams.textContent=`${formatNumber(grams,1)} g`;
+      el.currentWeekEntries.textContent=String(weekEntries.length);
+      el.weeklyAverage.textContent=`${formatNumber(average,2)} doses`;
+      el.averageExclusionNote.textContent=excluded?`${excluded} ${excluded===1?"semana fora":"semanas fora"} da média`:"";
+      el.weeksCount.textContent=String(groups.length);
+
+      renderDays(start,weekEntries);
+      renderSelectedWeekBreakdown(weekEntries);
+      renderRecent(weekEntries);
+    }
+
+    function renderSelectedWeekBreakdown(weekEntries){
+      el.selectedWeekBreakdown.innerHTML="";
+      if(!weekEntries.length){
+        el.selectedWeekBreakdown.innerHTML='<div class="empty" style="grid-column:1/-1">Nenhuma bebida registrada nesta semana.</div>';
+        return;
+      }
+      const grouped=new Map();
+      weekEntries.forEach(item=>{
+        const name=item.typeName||drinkById(item.type).name;
+        const current=grouped.get(name)||{name,type:item.type,count:0,doses:0,grams:0};
+        current.count+=Number(item.count)||0;
+        current.doses+=Number(item.doses)||0;
+        current.grams+=Number(item.grams)||0;
+        grouped.set(name,current);
+      });
+      [...grouped.values()]
+        .sort((a,b)=>b.doses-a.doses)
+        .forEach(item=>{
+          const drink=drinkById(item.type);
+          const card=document.createElement("article");
+          card.className="drink-summary-card";
+          card.innerHTML=`<span>${drink.emoji}</span><b>${escapeHtml(item.name)}</b><small>${formatNumber(item.count,2)} ${Math.abs(item.count-1)<.005?"unidade":"unidades"} · ${formatNumber(item.doses,2)} doses<br>${formatNumber(item.grams,1)} g de álcool</small>`;
+          el.selectedWeekBreakdown.appendChild(card);
+        });
+    }
+
+    function renderDays(start,weekEntries){
+      const dayNames=["seg","ter","qua","qui","sex","sáb","dom"];
+      const todayKey=localDateKey(new Date());
+      el.dayGrid.innerHTML="";
+      dayNames.forEach((name,index)=>{
+        const date=addDays(start,index);
+        const dateKey=localDateKey(date);
+        const doses=weekEntries
+          .filter(item=>String(item.datetime).slice(0,10)===dateKey)
+          .reduce((sum,item)=>sum+Number(item.doses||0),0);
+        const limit=DAY_LIMITS[index];
+        const percentage=limit?Math.min(100,(doses/limit)*100):0;
+        const overLimit=limit&&doses>limit;
+        const card=document.createElement("article");
+        card.className="day"+(dateKey===todayKey?" today":"")+(limit?" limit-day":"")+(overLimit?" over-limit":"");
+        card.style.setProperty("--fill",`${percentage}%`);
+        card.innerHTML=`
+          <span class="day-name">${name}</span>
+          <span class="day-number">${pad(date.getDate())}</span>
+          <span class="day-dose">${formatNumber(doses,1)}</span>
+          ${limit?`<span class="day-limit">de ${limit} doses</span>`:""}
+          ${overLimit?'<span class="day-over">limite ultrapassado</span>':""}`;
+        el.dayGrid.appendChild(card);
+      });
+    }
+
+    function renderRecent(weekEntries=selectedWeekEntries()){
+      el.recentEntries.innerHTML="";
+      if(!weekEntries.length){
+        el.recentEntries.innerHTML='<div class="empty">Nenhuma bebida registrada nesta semana.</div>';
+        return;
+      }
+      [...weekEntries]
+        .sort((a,b)=>b.datetime.localeCompare(a.datetime))
+        .forEach(item=>el.recentEntries.appendChild(entryCard(item)));
+    }
+
+    function entryCard(item){
+      const drink=drinkById(item.type);
+      const date=parseLocalDate(item.datetime);
+      const card=document.createElement("article");
+      card.className="entry";
+      card.innerHTML=`
+        <div class="entry-icon">${drink.emoji}</div>
+        <div class="entry-main">
+          <b>${escapeHtml(item.typeName||drink.name)}</b>
+          <span>${formatNumber(item.count,2)} × ${formatNumber(item.volume,0)} ml · ${formatNumber(item.abv,1)}%<br>${formatShortDate(date)} às ${formatDate(date,{hour:"2-digit",minute:"2-digit"})}</span>
+        </div>
+        <div class="entry-side">
+          <b>${formatNumber(item.doses,2)} doses</b>
+          <span>${formatNumber(item.grams,1)} g</span>
+          <button class="delete-entry" type="button" data-delete-id="${escapeHtml(item.id)}">Excluir</button>
+        </div>`;
+      return card;
+    }
+
+    function renderHistory(){
+      const groups=groupCalendarWeeks();
+      const eligible=averageEligibleWeeks(groups);
+      const excluded=groups.length-eligible.length;
+      const average=weeklyAverage(groups);
+      el.historyAverage.textContent=`${formatNumber(average,2)} doses`;
+      el.historyAverageDetail.textContent=groups.length
+        ?`${eligible.length} ${eligible.length===1?"semana considerada":"semanas consideradas"} na média${excluded?` · ${excluded} ${excluded===1?"atípica excluída":"atípicas excluídas"}`:""}`
+        :"Nenhuma semana registrada";
+      el.weekList.innerHTML="";
+
+      if(!groups.length){
+        el.weekList.innerHTML='<div class="empty">O resumo semanal aparecerá depois do primeiro registro.</div>';
+        return;
+      }
+
+      const max=Math.max(...groups.map(week=>week.doses),1);
+      groups.forEach((week,index)=>{
+        const card=document.createElement("article");
+        card.className="week-card"+(week.doses===0?" zero-week":"")+(week.atypical?" atypical":"");
+        card.tabIndex=0;
+        card.setAttribute("role","button");
+        card.setAttribute("aria-label",`Abrir semana de ${formatWeekRange(week.start)}`);
+        const title=week.key===weekKey(new Date())?"Semana atual":`Semana ${groups.length-index}`;
+        card.innerHTML=`
+          <div class="week-top">
+            <b>${title}</b>
+            <span>${formatWeekRange(week.start)}</span>
+          </div>
+          <div class="week-total">
+            <strong>${formatNumber(week.doses,2)}</strong>
+            <small>doses</small>
+            <span class="week-records">${week.entries.length} ${week.entries.length===1?"registro":"registros"}</span>
+          </div>
+          <div class="bar"><i style="width:${Math.min(100,(week.doses/max)*100)}%"></i></div>
+          ${week.atypical?'<div class="week-breakdown"><span class="atypical-tag">Atípica</span></div>':""}`;
+        card.onclick=()=>openWeek(week.start);
+        card.onkeydown=event=>{
+          if(event.key==="Enter"||event.key===" "){
+            event.preventDefault();
+            openWeek(week.start);
+          }
+        };
+        el.weekList.appendChild(card);
+      });
+    }
+
+    function renderAll(){
+      renderDashboard();
+      renderHistory();
+    }
+
+    function buildWeeklyReport(){
+      const start=startOfWeek(selectedWeekStart);
+      const end=addDays(start,6);
+      const weekEntries=[...selectedWeekEntries()].sort((a,b)=>a.datetime.localeCompare(b.datetime));
+      const atypical=isAtypicalWeek(start);
+      const totalDoses=weekEntries.reduce((sum,item)=>sum+Number(item.doses||0),0);
+      const totalGrams=weekEntries.reduce((sum,item)=>sum+Number(item.grams||0),0);
+      const byDay=Array.from({length:7},(_,index)=>{
+        const date=addDays(start,index);
+        const dateKey=localDateKey(date);
+        const items=weekEntries.filter(item=>String(item.datetime).slice(0,10)===dateKey);
+        return{
+          date,
+          items,
+          doses:items.reduce((sum,item)=>sum+Number(item.doses||0),0),
+          grams:items.reduce((sum,item)=>sum+Number(item.grams||0),0)
+        };
+      });
+      const rows=weekEntries.length
+        ?weekEntries.map(item=>{
+            const date=parseLocalDate(item.datetime);
+            return `<tr>
+              <td>${formatShortDate(date)}</td>
+              <td>${formatDate(date,{hour:"2-digit",minute:"2-digit"})}</td>
+              <td>${escapeHtml(item.typeName||drinkById(item.type).name)}</td>
+              <td>${formatNumber(item.count,2)} × ${formatNumber(item.volume,0)} ml</td>
+              <td>${formatNumber(item.abv,1)}%</td>
+              <td>${formatNumber(item.doses,2)}</td>
+              <td>${formatNumber(item.grams,1)} g</td>
+            </tr>`;
+          }).join("")
+        :'<tr><td colspan="7">Nenhuma bebida registrada nesta semana.</td></tr>';
+
+      const dayCards=byDay.map(day=>`
+        <div class="day-report">
+          <b>${formatShortDate(day.date)}</b>
+          <span>${formatNumber(day.doses,2)} doses</span>
+          <small>${formatNumber(day.grams,1)} g de álcool</small>
+        </div>`).join("");
+
+      const reportWindow=window.open("","_blank");
+      if(!reportWindow){
+        toast("O navegador bloqueou o relatório. Libere os pop-ups e tente novamente.");
+        return;
+      }
+
+      reportWindow.document.write(`<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Relatório semanal · Confesso que bebi</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px;color:#2d2540;background:#fff;font-family:Arial,sans-serif}
+  .report{max-width:900px;margin:auto}
+  header{display:flex;justify-content:space-between;gap:20px;padding-bottom:18px;border-bottom:3px solid #ff5f7a}
+  h1{margin:0;font-size:24px}header p{margin:6px 0 0;color:#776f88}
+  .period{font-weight:700;text-align:right}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}
+  .summary div,.day-report{padding:14px;border:1px solid #eee5ed;border-radius:12px}
+  .summary span,.day-report small{display:block;color:#776f88;font-size:12px}
+  .summary b{display:block;margin-top:6px;font-size:20px}
+  .days{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin:18px 0 24px}
+  .day-report{text-align:center;padding:10px 6px}.day-report b{display:block;font-size:11px}
+  .day-report span{display:block;margin:7px 0 4px;color:#df3f61;font-weight:700;font-size:12px}
+  table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px}
+  th,td{padding:9px 7px;border-bottom:1px solid #eee5ed;text-align:left}
+  th{background:#fff3e2;color:#5f4b2e}
+  footer{margin-top:25px;color:#776f88;font-size:10px;line-height:1.5}
+  .print{margin:0 0 18px;padding:10px 15px;border:0;border-radius:10px;background:#2d2540;color:#fff;font-weight:700}
+  @media print{body{padding:0}.print{display:none}.report{max-width:none}}
+  @media(max-width:650px){.summary{grid-template-columns:1fr}.days{grid-template-columns:repeat(2,1fr)}header{display:block}.period{text-align:left;margin-top:12px}table{font-size:10px}}
+</style>
+</head>
+<body>
+<div class="report">
+<button class="print" onclick="window.print()">Salvar ou imprimir em PDF</button>
+<header>
+  <div><h1>Confesso que bebi</h1><p>Relatório semanal de consumo${atypical?" · Semana atípica, excluída da média":""}</p></div>
+  <div class="period">${formatShortDate(start)} a ${formatShortDate(end)}</div>
+</header>
+<section class="summary">
+  <div><span>Total da semana</span><b>${formatNumber(totalDoses,2)} doses</b></div>
+  <div><span>Álcool puro estimado</span><b>${formatNumber(totalGrams,1)} g</b></div>
+  <div><span>Registros</span><b>${weekEntries.length}</b></div>
+</section>
+<section class="days">${dayCards}</section>
+<h2>Registros da semana</h2>
+<table>
+<thead><tr><th>Data</th><th>Hora</th><th>Bebida</th><th>Quantidade</th><th>Teor</th><th>Doses</th><th>Álcool</th></tr></thead>
+<tbody>${rows}</tbody>
+</table>
+<footer>
+  1 dose-padrão foi calculada como 10 g de álcool puro. Os valores são estimativas baseadas nas informações registradas e não indicam que seja seguro dirigir ou realizar atividades de risco.
+</footer>
+</div>
+</body>
+</html>`);
+      reportWindow.document.close();
+      reportWindow.focus();
+    }
+
+    function deleteEntry(id){
+      const item=entries.find(entry=>entry.id===id);
+      if(!item)return;
+      if(!confirm(`Excluir o registro de ${item.typeName||drinkById(item.type).name}?`))return;
+      entries=entries.filter(entry=>entry.id!==id);
+      saveEntries();
+      renderAll();
+      toast("Registro excluído.");
+    }
+
+    function switchView(id){
+      $$(".view").forEach(view=>view.classList.toggle("active",view.id===id));
+      $$(".nav").forEach(button=>button.classList.toggle("active",button.dataset.view===id));
+      if(id==="register"){
+        el.consumedAt.max=toDatetimeLocal(new Date());
+        if(!el.consumedAt.value)el.consumedAt.value=toDatetimeLocal(new Date());
+        updatePreview();
+      }
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+
+    function escapeHtml(value){
+      return String(value??"").replace(/[&<>"']/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char]));
+    }
+
+    function toast(message){
+      clearTimeout(toastTimer);
+      el.toast.textContent=message;
+      el.toast.classList.add("show");
+      toastTimer=setTimeout(()=>el.toast.classList.remove("show"),2400);
+    }
+
+    el.drinkForm.addEventListener("submit",event=>{
+      event.preventDefault();
+      const volume=effectiveVolume();
+      const abv=effectiveAbv();
+      const count=Number(el.count.value);
+      const datetime=el.consumedAt.value;
+      if(!(volume>0)||!(abv>0)||!(count>0)||!datetime)return toast("Confira os dados do registro.");
+      if(parseLocalDate(datetime)>new Date())return toast("A data não pode estar no futuro.");
+
+      const drink=drinkById(selectedDrink);
+      const result=calculate(volume,abv,count);
+      entries.unshift({
+        id:crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        datetime,
+        type:selectedDrink,
+        typeName:drink.name,
+        volume,
+        abv,
+        count,
+        grams:result.grams,
+        doses:result.doses,
+        createdAt:Date.now()
+      });
+      entries.sort((a,b)=>b.datetime.localeCompare(a.datetime));
+      saveEntries();
+      renderAll();
+      el.count.value="1";
+      el.consumedAt.value=toDatetimeLocal(new Date());
+      updatePreview();
+      switchView("dashboard");
+      toast("Bebida registrada.");
+    });
+
+    $("#minusCount").onclick=()=>{
+      el.count.value=String(Math.max(.25,(Number(el.count.value)||1)-.25));
+      updatePreview();
+    };
+    $("#plusCount").onclick=()=>{
+      el.count.value=String(Math.min(100,(Number(el.count.value)||1)+.25));
+      updatePreview();
+    };
+    [el.volume,el.abv,el.count].forEach(input=>input.addEventListener("input",updatePreview));
+    el.volumePreset.addEventListener("change",handleVolumePreset);
+    el.abvPreset.addEventListener("change",handleAbvPreset);
+    $("#quickAdd").onclick=()=>switchView("register");
+    $("#weekReport").onclick=buildWeeklyReport;
+    el.previousWeek.onclick=()=>moveWeek(-1);
+    el.nextWeek.onclick=()=>moveWeek(1);
+    el.atypicalWeek.onchange=event=>setSelectedWeekAtypical(event.target.checked);
+    el.recentEntries.addEventListener("click",event=>{
+      const button=event.target.closest("[data-delete-id]");
+      if(!button)return;
+      event.preventDefault();
+      event.stopPropagation();
+      deleteEntry(button.dataset.deleteId);
+    });
+    $("#showAllHistory").onclick=()=>switchView("history");
+    $$(".nav").forEach(button=>button.onclick=()=>switchView(button.dataset.view));
+
+    selectDrink("cerveja");
+    el.consumedAt.value=toDatetimeLocal(new Date());
+    el.consumedAt.max=toDatetimeLocal(new Date());
+    renderAll();
+  </script>
+</body>
+</html>
