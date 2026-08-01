@@ -195,6 +195,7 @@
       min-height:42px;border:1px solid var(--line);border-radius:13px;padding:0 15px;
       background:#fff;color:var(--ink);font-weight:800;
     }
+    .secondary.full{width:100%}
     .stats{
       display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0 20px;
     }
@@ -250,9 +251,18 @@
     .entry-side{text-align:right}
     .entry-side b{display:block;color:var(--pink-dark);font-size:.79rem}
     .entry-side span{display:block;margin-top:3px;color:var(--muted);font-size:.59rem}
-    .delete-entry{
-      display:block;margin:7px 0 0 auto;padding:2px;border:0;background:none;
-      color:#a69bab;font-size:.58rem;text-decoration:underline;
+    .entry-actions{
+      display:flex;justify-content:flex-end;gap:8px;margin-top:7px;
+    }
+    .edit-entry,.delete-entry{
+      padding:2px;border:0;background:none;font-size:.58rem;font-weight:800;text-decoration:underline;
+    }
+    .edit-entry{color:var(--pink-dark)}
+    .delete-entry{color:#a69bab}
+    .form-actions{display:grid;gap:9px}
+    .editing-notice{
+      margin:-6px 0 15px;padding:10px 12px;border:1px solid #8158e82b;border-radius:14px;
+      background:#8158e80d;color:var(--purple);font-size:.65rem;font-weight:800;line-height:1.4;
     }
     .page-title{margin:3px 2px 18px}
     .page-title p{margin:0 0 4px;color:var(--pink-dark);font-size:.66rem;font-weight:850;text-transform:uppercase;letter-spacing:.08em}
@@ -402,7 +412,7 @@
       </button>
 
       <p id="authMessage" class="auth-message" role="status"></p>
-      <p class="auth-note">Nos dois casos, enviaremos um link ao e-mail. No primeiro acesso, o usuário é criado automaticamente.</p>
+      <p class="auth-note">Nos dois casos, enviaremos um link ao e-mail. Depois do acesso, a sessão fica salva neste aparelho até você clicar em Sair.</p>
     </form>
   </section>
 
@@ -472,11 +482,14 @@
 
       <section id="register" class="view">
         <div class="page-title">
-          <p>Novo registro</p>
-          <h2>O que você bebeu?</h2>
+          <p id="registerEyebrow">Novo registro</p>
+          <h2 id="registerTitle">O que você bebeu?</h2>
         </div>
 
         <form id="drinkForm" class="card">
+          <div id="editingNotice" class="editing-notice hidden">
+            Você está editando um registro existente. As alterações substituirão os dados anteriores.
+          </div>
           <div class="field">
             <label>Tipo de bebida</label>
             <div id="drinkGrid" class="drink-grid"></div>
@@ -517,7 +530,10 @@
             <small id="gramsPreview">0 g de álcool puro</small>
           </div>
 
-          <button class="primary pink full" type="submit">Adicionar ao registro</button>
+          <div class="form-actions">
+            <button id="submitEntryButton" class="primary pink full" type="submit">Adicionar ao registro</button>
+            <button id="cancelEditButton" class="secondary full hidden" type="button">Cancelar edição</button>
+          </div>
           <p class="formula-note">Para o contador, 1 dose-padrão equivale a 10 g de álcool puro. O cálculo é uma estimativa e não deve ser usado para decidir se é seguro dirigir.</p>
         </form>
       </section>
@@ -554,7 +570,7 @@
   <script type="module">
     import {initializeApp} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import {
-      getAuth,browserLocalPersistence,setPersistence,onAuthStateChanged,
+      initializeAuth,indexedDBLocalPersistence,browserLocalPersistence,onAuthStateChanged,
       sendSignInLinkToEmail,isSignInWithEmailLink,signInWithEmailLink,signOut
     } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
     import {
@@ -572,8 +588,9 @@
     };
 
     const firebaseApp=initializeApp(firebaseConfig);
-    const auth=getAuth(firebaseApp);
-    setPersistence(auth,browserLocalPersistence).catch(()=>{});
+    const auth=initializeAuth(firebaseApp,{
+      persistence:[indexedDBLocalPersistence,browserLocalPersistence]
+    });
     let db;
     try{
       db=initializeFirestore(firebaseApp,{
@@ -610,18 +627,17 @@
     };
 
     const BEER_VOLUME_PRESETS=[
-      {label:"Copo americano",value:150},
-      {label:"Copo normal",value:200},
-      {label:"Lata",value:350},
-      {label:"Caneca/Copão",value:400},
+      {label:"Copo americano",value:190},
+      {label:"Lata/copo normal",value:350},
+      {label:"Caneca",value:400},
       {label:"Latão",value:475},
       {label:"Canecão/garrafa alemã",value:500},
       {label:"Garrafa",value:600}
     ];
 
     const WINE_VOLUME_PRESETS=[
-      {label:"1/3 da taça",value:125},
-      {label:"1/2 da taça",value:200},
+      {label:"1/3 da taça",value:120},
+      {label:"1/2 da taça",value:180},
       {label:"Garrafa pequena",value:185},
       {label:"Garrafa grande",value:700}
     ];
@@ -631,6 +647,11 @@
     const $=selector=>document.querySelector(selector);
     const $$=selector=>[...document.querySelectorAll(selector)];
     const el={
+      registerEyebrow:$("#registerEyebrow"),
+      registerTitle:$("#registerTitle"),
+      editingNotice:$("#editingNotice"),
+      submitEntryButton:$("#submitEntryButton"),
+      cancelEditButton:$("#cancelEditButton"),
       currentWeekRange:$("#currentWeekRange"),
       selectedWeekLabel:$("#selectedWeekLabel"),
       selectedWeekDates:$("#selectedWeekDates"),
@@ -685,6 +706,7 @@
     let atypicalSnapshotMeta=null;
     let selectedDrink="cerveja";
     let selectedWeekStart=startOfWeek(new Date());
+    let editingEntryId=null;
     let toastTimer;
 
     function validEntry(item){
@@ -891,6 +913,7 @@
 
     function endUserSession(){
       stopCloudListeners();
+      resetEntryForm();
       currentUser=null;
       entries=[];
       atypicalWeeks=new Set();
@@ -1156,6 +1179,68 @@
       updatePreview();
     }
 
+    function setPresetOrCustom(select,input,value){
+      const option=[...select.options].find(item=>item.value!=="other"&&Number(item.value)===Number(value));
+      if(option){
+        select.value=option.value;
+        input.value=String(value);
+        input.classList.add("hidden");
+      }else{
+        select.value="other";
+        input.value=String(value);
+        input.classList.remove("hidden");
+      }
+    }
+
+    function resetEntryForm(){
+      editingEntryId=null;
+      el.registerEyebrow.textContent="Novo registro";
+      el.registerTitle.textContent="O que você bebeu?";
+      el.editingNotice.classList.add("hidden");
+      el.submitEntryButton.textContent="Adicionar ao registro";
+      el.cancelEditButton.classList.add("hidden");
+      selectDrink("cerveja");
+      el.count.value="1";
+      el.consumedAt.value=toDatetimeLocal(new Date());
+      el.consumedAt.max=toDatetimeLocal(new Date());
+      updatePreview();
+    }
+
+    function startEditingEntry(id){
+      const item=entries.find(entry=>entry.id===id);
+      if(!item)return toast("Registro não encontrado.");
+
+      editingEntryId=id;
+      selectedDrink=item.type||"outro";
+      configureDrinkShortcuts(drinkById(selectedDrink));
+      renderDrinkOptions();
+
+      if(usesBeerShortcuts()||usesWineVolumeShortcuts()){
+        setPresetOrCustom(el.volumePreset,el.volume,item.volume);
+      }else{
+        el.volume.value=String(item.volume);
+      }
+
+      if(usesBeerShortcuts()){
+        setPresetOrCustom(el.abvPreset,el.abv,item.abv);
+      }else{
+        el.abv.value=String(item.abv);
+      }
+
+      el.count.value=String(item.count);
+      el.consumedAt.value=item.datetime;
+      el.consumedAt.max=toDatetimeLocal(new Date());
+
+      el.registerEyebrow.textContent="Editar registro";
+      el.registerTitle.textContent=item.typeName||drinkById(item.type).name;
+      el.editingNotice.classList.remove("hidden");
+      el.submitEntryButton.textContent="Salvar alterações";
+      el.cancelEditButton.classList.remove("hidden");
+
+      updatePreview();
+      switchView("register");
+    }
+
     function updatePreview(){
       const result=calculate(effectiveVolume(),effectiveAbv(),el.count.value);
       el.dosePreview.textContent=`${formatNumber(result.doses,2)} ${Math.abs(result.doses-1)<.005?"dose":"doses"}`;
@@ -1269,7 +1354,10 @@
         <div class="entry-side">
           <b>${formatNumber(item.doses,2)} doses</b>
           <span>${formatNumber(item.grams,1)} g</span>
-          <button class="delete-entry" type="button" data-delete-id="${escapeHtml(item.id)}">Excluir</button>
+          <div class="entry-actions">
+            <button class="edit-entry" type="button" data-edit-id="${escapeHtml(item.id)}">Editar</button>
+            <button class="delete-entry" type="button" data-delete-id="${escapeHtml(item.id)}">Excluir</button>
+          </div>
         </div>`;
       return card;
     }
@@ -1477,17 +1565,23 @@
     el.drinkForm.addEventListener("submit",event=>{
       event.preventDefault();
       if(!currentUser)return toast("Entre na conta para registrar.");
+
       const volume=effectiveVolume();
       const abv=effectiveAbv();
       const count=Number(el.count.value);
       const datetime=el.consumedAt.value;
+
       if(!(volume>0)||!(abv>0)||!(count>0)||!datetime)return toast("Confira os dados do registro.");
       if(parseLocalDate(datetime)>new Date())return toast("A data não pode estar no futuro.");
 
       const drink=drinkById(selectedDrink);
       const result=calculate(volume,abv,count);
+      const previousItem=editingEntryId
+        ?entries.find(entry=>entry.id===editingEntryId)
+        :null;
+
       const item={
-        id:crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id:editingEntryId||(crypto.randomUUID?.()||`${Date.now()}-${Math.random().toString(16).slice(2)}`),
         datetime,
         type:selectedDrink,
         typeName:drink.name,
@@ -1496,25 +1590,39 @@
         count,
         grams:result.grams,
         doses:result.doses,
-        createdAt:Date.now()
+        createdAt:previousItem?.createdAt||Date.now()
       };
-      entries.unshift(item);
+
+      if(previousItem){
+        entries=entries.map(entry=>entry.id===item.id?item:entry);
+      }else{
+        entries.unshift(item);
+      }
+
       entries.sort((a,b)=>b.datetime.localeCompare(a.datetime));
       saveEntries();
       renderAll();
-      el.count.value="1";
-      el.consumedAt.value=toDatetimeLocal(new Date());
-      updatePreview();
-      switchView("dashboard");
-      toast("Bebida registrada.");
       setSyncStatus("Enviando...","syncing");
+
+      const wasEditing=Boolean(previousItem);
+      selectedWeekStart=startOfWeek(datetime);
+      resetEntryForm();
+      switchView("dashboard");
+      renderDashboard();
+      toast(wasEditing?"Registro atualizado.":"Bebida registrada.");
+
       setDoc(doc(userEntriesCollection(),item.id),entryDocument(item),{merge:true}).catch(error=>{
-        entries=entries.filter(entry=>entry.id!==item.id);
+        if(previousItem){
+          entries=entries.map(entry=>entry.id===previousItem.id?previousItem:entry);
+        }else{
+          entries=entries.filter(entry=>entry.id!==item.id);
+        }
+        entries.sort((a,b)=>b.datetime.localeCompare(a.datetime));
         saveEntries();
         renderAll();
         updateSyncStatus();
         console.error(error);
-        toast("Não foi possível salvar o registro.");
+        toast(wasEditing?"Não foi possível atualizar o registro.":"Não foi possível salvar o registro.");
       });
     });
 
@@ -1529,17 +1637,33 @@
     [el.volume,el.abv,el.count].forEach(input=>input.addEventListener("input",updatePreview));
     el.volumePreset.addEventListener("change",handleVolumePreset);
     el.abvPreset.addEventListener("change",handleAbvPreset);
-    $("#quickAdd").onclick=()=>switchView("register");
+    $("#quickAdd").onclick=()=>{
+      resetEntryForm();
+      switchView("register");
+    };
     $("#weekReport").onclick=buildWeeklyReport;
     el.previousWeek.onclick=()=>moveWeek(-1);
     el.nextWeek.onclick=()=>moveWeek(1);
     el.atypicalWeek.onchange=event=>setSelectedWeekAtypical(event.target.checked);
     el.recentEntries.addEventListener("click",event=>{
-      const button=event.target.closest("[data-delete-id]");
-      if(!button)return;
+      const editButton=event.target.closest("[data-edit-id]");
+      if(editButton){
+        event.preventDefault();
+        event.stopPropagation();
+        startEditingEntry(editButton.dataset.editId);
+        return;
+      }
+
+      const deleteButton=event.target.closest("[data-delete-id]");
+      if(!deleteButton)return;
       event.preventDefault();
       event.stopPropagation();
-      deleteEntry(button.dataset.deleteId);
+      deleteEntry(deleteButton.dataset.deleteId);
+    });
+
+    el.cancelEditButton.addEventListener("click",()=>{
+      resetEntryForm();
+      switchView("dashboard");
     });
     $("#showAllHistory").onclick=()=>switchView("history");
     $$(".nav").forEach(button=>button.onclick=()=>switchView(button.dataset.view));
@@ -1679,9 +1803,7 @@
     el.accessEmail.value=localStorage.getItem(EMAIL_STORAGE_KEY)||"";
     finishEmailLinkAccess();
 
-    selectDrink("cerveja");
-    el.consumedAt.value=toDatetimeLocal(new Date());
-    el.consumedAt.max=toDatetimeLocal(new Date());
+    resetEntryForm();
     renderAll();
   </script>
 </body>
