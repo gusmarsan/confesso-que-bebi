@@ -1,7 +1,8 @@
-const CACHE_NAME = "confesso-que-bebi-pwa-v1";
+const CACHE_NAME = "confesso-que-bebi-pwa-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./acesso.html",
   "./install.html",
   "./manifest.webmanifest",
   "./icon-192.png",
