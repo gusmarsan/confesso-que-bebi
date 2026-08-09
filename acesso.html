@@ -39,7 +39,7 @@
   <script type="module">
     import {initializeApp} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import {
-      initializeAuth,browserLocalPersistence,onAuthStateChanged,
+      initializeAuth,indexedDBLocalPersistence,browserLocalPersistence,browserPopupRedirectResolver,onAuthStateChanged,
       GoogleAuthProvider,signInWithPopup,linkWithPopup,signOut
     } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
@@ -53,7 +53,10 @@
     };
 
     const firebaseApp=initializeApp(firebaseConfig);
-    const auth=initializeAuth(firebaseApp,{persistence:browserLocalPersistence});
+    const auth=initializeAuth(firebaseApp,{
+      persistence:[indexedDBLocalPersistence,browserLocalPersistence],
+      popupRedirectResolver:browserPopupRedirectResolver
+    });
     const provider=new GoogleAuthProvider();
     provider.setCustomParameters({prompt:"select_account"});
 
@@ -125,7 +128,8 @@
         "auth/network-request-failed":"Não foi possível acessar a internet.",
         "auth/credential-already-in-use":"Esta conta Google já está ligada a outro usuário do Firebase.",
         "auth/provider-already-linked":"O Google já está vinculado a esta conta.",
-        "auth/account-exists-with-different-credential":"Já existe uma conta com este e-mail em outro método de acesso. Abra o app pelo link de e-mail uma última vez e volte aqui para vincular o Google."
+        "auth/account-exists-with-different-credential":"Já existe uma conta com este e-mail em outro método de acesso. Abra o app pelo link de e-mail uma última vez e volte aqui para vincular o Google.",
+        "auth/argument-error":"Falha interna ao abrir o acesso Google. Recarregue esta página; a configuração de autenticação foi corrigida."
       };
       return messages[code]||`Não foi possível concluir o acesso. Código: ${code||"erro-sem-codigo"}`;
     }
