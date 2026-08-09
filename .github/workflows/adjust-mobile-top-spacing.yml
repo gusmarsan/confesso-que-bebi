@@ -1,0 +1,57 @@
+name: Adjust mobile top spacing
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/adjust-mobile-top-spacing.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  adjust:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add breathing room above mobile header
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("index.html")
+          text = path.read_text(encoding="utf-8")
+
+          marker = "    .topbar{\n"
+          start = text.find(marker)
+          if start == -1:
+              raise SystemExit("topbar CSS block not found")
+
+          end = text.find("    }\n", start)
+          if end == -1:
+              raise SystemExit("topbar CSS block end not found")
+          end += len("    }\n")
+
+          block = text[start:end]
+          old_padding = "padding:22px 2px 16px;"
+          if old_padding not in block:
+              raise SystemExit("expected topbar padding not found")
+
+          block = block.replace(old_padding, "padding:34px 2px 16px;", 1)
+          desktop_override = "    @media (min-width:768px){\n      .topbar{padding-top:22px}\n    }\n"
+
+          text = text[:start] + block + desktop_override + text[end:]
+          path.write_text(text, encoding="utf-8")
+          PY
+
+      - name: Commit adjustment
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Add mobile header breathing room"
+          git push
