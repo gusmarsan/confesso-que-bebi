@@ -1,26 +1,40 @@
 {
-  "id": "./",
+  "id": "/confesso-que-bebi/",
   "name": "Confesso que bebi",
   "short_name": "Confesso",
   "description": "Registro pessoal de consumo de bebidas com sincronização entre aparelhos",
-  "start_url": "./acesso.html",
-  "scope": "./",
+  "start_url": "/confesso-que-bebi/acesso.html",
+  "scope": "/confesso-que-bebi/",
   "display": "standalone",
+  "display_override": ["standalone"],
   "orientation": "portrait-primary",
   "background_color": "#fffaf5",
   "theme_color": "#ff5f7a",
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/confesso-que-bebi/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./icon-512.png",
+      "src": "/confesso-que-bebi/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/confesso-que-bebi/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/confesso-que-bebi/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
