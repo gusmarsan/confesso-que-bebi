@@ -14,7 +14,7 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
 
-    private static final String APP_URL = "https://gusmarsan.github.io/confesso-que-bebi/";
+    private static final String APP_URL = "https://gusmarsan.github.io/confesso-que-bebi/acesso.html";
     private static final String APP_HOST = "gusmarsan.github.io";
     private static final String AUTH_HOST = "confesso-que-bebi.firebaseapp.com";
 
@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.1");
+        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.2");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
