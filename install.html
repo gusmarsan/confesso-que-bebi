@@ -5,92 +5,107 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ff5f7a">
   <title>Instalar · Confesso que bebi</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
-  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="manifest" href="/confesso-que-bebi/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="/confesso-que-bebi/icon-192.png">
+  <link rel="apple-touch-icon" href="/confesso-que-bebi/icon-192.png">
   <style>
     *{box-sizing:border-box}
     body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#fffaf5;color:#2d2540;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
     main{width:min(100%,420px);text-align:center}
     img{width:132px;height:132px;border-radius:30px;box-shadow:0 18px 42px rgba(45,37,64,.18)}
     h1{margin:22px 0 8px;font-size:1.6rem;letter-spacing:-.04em}
-    p{margin:0 auto 20px;max-width:350px;color:#776f88;font-size:.9rem;line-height:1.5}
+    p{margin:0 auto 20px;max-width:360px;color:#776f88;font-size:.9rem;line-height:1.5}
     button,a{width:100%;min-height:50px;display:flex;align-items:center;justify-content:center;border-radius:15px;font:inherit;font-weight:850;text-decoration:none}
     button{border:0;background:#2d2540;color:#fff;cursor:pointer}
-    button:disabled{display:none}
+    button[hidden]{display:none}
     a{margin-top:10px;border:1px solid #eee5ed;background:#fff;color:#2d2540}
     .chrome{background:#2d2540;color:#fff;border-color:#2d2540}
-    small{display:block;margin-top:16px;color:#776f88;font-size:.72rem;line-height:1.5}
-    .steps{margin:18px 0 0;padding:14px 16px;border:1px solid #eee5ed;border-radius:16px;background:#fff;text-align:left;color:#5d566a;font-size:.78rem;line-height:1.55}
-    .steps b{color:#2d2540}
+    .status{margin-top:16px;padding:14px 16px;border:1px solid #eee5ed;border-radius:16px;background:#fff;color:#5d566a;font-size:.78rem;line-height:1.5;text-align:left}
+    .status strong{color:#2d2540}
   </style>
 </head>
 <body>
   <main>
-    <img src="./icon-512.png" alt="Ícone do Confesso que bebi">
+    <img src="/confesso-que-bebi/icon-512.png" alt="Ícone do Confesso que bebi">
     <h1>Confesso que bebi</h1>
-    <p>Para instalar como app no Android, esta página precisa estar aberta no Chrome, não dentro do navegador de outro aplicativo.</p>
+    <p>Esta página só libera a instalação quando o Chrome reconhecer o Confesso que bebi como aplicativo. Ela não cria atalhos.</p>
 
     <a id="openChrome" class="chrome" href="intent://gusmarsan.github.io/confesso-que-bebi/install.html#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=https%3A%2F%2Fgusmarsan.github.io%2Fconfesso-que-bebi%2Finstall.html;end">Abrir no Chrome</a>
-    <button id="installButton" disabled>Instalar no celular</button>
-    <a href="./">Abrir o app</a>
+    <button id="installButton" type="button" hidden>Instalar como app</button>
+    <a href="/confesso-que-bebi/acesso.html">Abrir o app</a>
 
-    <div class="steps">
-      <b>No Chrome:</b><br>
-      1. Toque em “Instalar no celular” se o botão aparecer.<br>
-      2. Se não aparecer, toque em ⋮ e escolha “Instalar app” ou “Adicionar à tela inicial”.
-    </div>
-    <small id="help">Depois da instalação, procure por “Confesso” também na gaveta de aplicativos. Dependendo da configuração do Android, o ícone pode não ser colocado automaticamente na tela inicial.</small>
+    <div id="status" class="status"><strong>Verificando instalação…</strong><br>O botão “Instalar como app” aparecerá somente quando o Android liberar a instalação real.</div>
   </main>
 
   <script>
     let deferredPrompt = null;
     const installButton = document.getElementById("installButton");
     const openChrome = document.getElementById("openChrome");
-    const help = document.getElementById("help");
-    const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    const status = document.getElementById("status");
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    const ua = navigator.userAgent || "";
+    const chromeAndroid = /Android/i.test(ua) && /Chrome\//i.test(ua) && !/wv\)/i.test(ua);
 
-    if (isStandalone) {
-      openChrome.style.display = "none";
-      installButton.disabled = true;
-      help.textContent = "O app já está instalado neste aparelho. Procure por “Confesso” na tela inicial ou na gaveta de aplicativos.";
+    if (standalone) {
+      openChrome.hidden = true;
+      installButton.hidden = true;
+      status.innerHTML = "<strong>App instalado.</strong><br>Você já está executando o Confesso que bebi em modo aplicativo.";
+    } else if (chromeAndroid) {
+      openChrome.hidden = true;
     }
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js", {scope:"./"})
-        .then(() => navigator.serviceWorker.ready)
-        .catch(console.error);
+    async function prepareServiceWorker(){
+      if (!("serviceWorker" in navigator)) {
+        status.innerHTML = "<strong>Este navegador não oferece o recurso necessário.</strong><br>Abra esta página no Chrome do Android.";
+        return;
+      }
+      try {
+        await navigator.serviceWorker.register("/confesso-que-bebi/sw.js", {scope:"/confesso-que-bebi/"});
+        await navigator.serviceWorker.ready;
+        if (!navigator.serviceWorker.controller && !sessionStorage.getItem("confesso-pwa-reloaded")) {
+          sessionStorage.setItem("confesso-pwa-reloaded", "1");
+          location.reload();
+          return;
+        }
+        if (!standalone) {
+          status.innerHTML = "<strong>Estrutura do app pronta.</strong><br>Aguardando o Chrome liberar a instalação real. Interaja com esta página e mantenha-a aberta por alguns instantes. Não use “Adicionar à tela inicial”.";
+        }
+      } catch (error) {
+        console.error(error);
+        status.innerHTML = "<strong>Não foi possível preparar a instalação.</strong><br>Atualize a página no Chrome e tente novamente.";
+      }
     }
 
     window.addEventListener("beforeinstallprompt", event => {
       event.preventDefault();
       deferredPrompt = event;
-      installButton.disabled = false;
-      openChrome.style.display = "none";
+      installButton.hidden = false;
+      openChrome.hidden = true;
+      status.innerHTML = "<strong>Pronto para instalar como app.</strong><br>Use somente o botão acima. Agora o Chrome reconheceu o PWA de verdade.";
     });
 
     installButton.addEventListener("click", async () => {
       if (!deferredPrompt) return;
+      installButton.disabled = true;
       deferredPrompt.prompt();
       const choice = await deferredPrompt.userChoice;
       deferredPrompt = null;
       if (choice.outcome === "accepted") {
-        help.textContent = "Instalação aceita. Procure por “Confesso” na tela inicial ou na gaveta de aplicativos.";
+        status.innerHTML = "<strong>Instalação aceita.</strong><br>O Android está adicionando o Confesso que bebi como aplicativo.";
+      } else {
+        status.innerHTML = "<strong>Instalação cancelada.</strong><br>Nenhum atalho foi criado.";
+        installButton.hidden = true;
       }
-      installButton.disabled = true;
+      installButton.disabled = false;
     });
 
     window.addEventListener("appinstalled", () => {
-      openChrome.style.display = "none";
-      installButton.disabled = true;
-      help.textContent = "App instalado. Procure por “Confesso” na tela inicial ou na gaveta de aplicativos.";
+      installButton.hidden = true;
+      openChrome.hidden = true;
+      status.innerHTML = "<strong>App instalado.</strong><br>Agora ele deve aparecer como Confesso na gaveta de aplicativos e abrir sem a barra normal do Chrome.";
     });
 
-    const ua = navigator.userAgent || "";
-    const isChromeAndroid = /Android/i.test(ua) && /Chrome\//i.test(ua) && !/wv\)/i.test(ua);
-    if (isChromeAndroid && !isStandalone) {
-      openChrome.style.display = "none";
-    }
+    prepareServiceWorker();
   </script>
 </body>
 </html>
