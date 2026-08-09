@@ -1,8 +1,9 @@
 {
+  "id": "./",
   "name": "Confesso que bebi",
   "short_name": "Confesso",
   "description": "Registro pessoal de consumo de bebidas com sincronização entre aparelhos",
-  "start_url": "./",
+  "start_url": "./acesso.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
