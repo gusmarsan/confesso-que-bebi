@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.2");
+        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.4");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
