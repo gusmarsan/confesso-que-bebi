@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ff5f7a">
+  <title>Acesso · Confesso que bebi</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#fffaf5;color:#2d2540;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(100%,420px);padding:24px;border:1px solid #eee5ed;border-radius:26px;background:#fff;box-shadow:0 18px 45px rgba(79,49,93,.12);text-align:center}
+    img{width:96px;height:96px;border-radius:24px;box-shadow:0 14px 32px rgba(45,37,64,.16)}
+    h1{margin:18px 0 8px;font-size:1.45rem;letter-spacing:-.04em}
+    p{margin:0 0 18px;color:#776f88;font-size:.82rem;line-height:1.5}
+    .account{display:none;margin:0 0 16px;padding:12px;border-radius:14px;background:#fff7ef;color:#5f4b2e;font-size:.75rem;line-height:1.45}
+    button,a{width:100%;min-height:50px;display:flex;align-items:center;justify-content:center;border-radius:14px;font:inherit;font-weight:850;text-decoration:none}
+    button{border:0;background:#fff;color:#2d2540;box-shadow:inset 0 0 0 1px #ded7df,0 7px 20px rgba(74,50,39,.07);cursor:pointer}
+    button:disabled{opacity:.58;cursor:wait}
+    .google-mark{width:24px;height:24px;display:grid;place-items:center;margin-right:10px;border:1px solid #eee5ed;border-radius:50%;color:#4285f4;background:#fff;font-weight:950}
+    a{margin-top:10px;background:#2d2540;color:#fff}
+    small{display:block;min-height:34px;margin-top:14px;color:#776f88;font-size:.69rem;line-height:1.45}
+    .error{color:#b23f57}
+  </style>
+</head>
+<body>
+  <main>
+    <img src="./icon-512.png" alt="Ícone do Confesso que bebi">
+    <h1>Confesso que bebi</h1>
+    <p id="intro">Acesso rápido e persistente neste aparelho.</p>
+    <div id="account" class="account"></div>
+    <button id="googleButton" type="button"><span class="google-mark">G</span><span id="buttonLabel">Entrar com Google</span></button>
+    <a id="openApp" href="./index.html">Abrir o app</a>
+    <small id="status">Use a mesma conta Google/e-mail que já usa no Confesso que bebi.</small>
+  </main>
+
+  <script type="module">
+    import {initializeApp} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+    import {
+      initializeAuth,browserLocalPersistence,onAuthStateChanged,
+      GoogleAuthProvider,signInWithPopup,linkWithPopup,signOut
+    } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+
+    const firebaseConfig={
+      apiKey:"AIzaSyCntynX17PUan8o1EAW0-QFOOCNeQnMY5g",
+      authDomain:"confesso-que-bebi.firebaseapp.com",
+      projectId:"confesso-que-bebi",
+      storageBucket:"confesso-que-bebi.firebasestorage.app",
+      messagingSenderId:"324283589525",
+      appId:"1:324283589525:web:78a0bcc2f7b736a6f78c9c"
+    };
+
+    const firebaseApp=initializeApp(firebaseConfig);
+    const auth=initializeAuth(firebaseApp,{persistence:browserLocalPersistence});
+    const provider=new GoogleAuthProvider();
+    provider.setCustomParameters({prompt:"select_account"});
+
+    const button=document.getElementById("googleButton");
+    const buttonLabel=document.getElementById("buttonLabel");
+    const account=document.getElementById("account");
+    const intro=document.getElementById("intro");
+    const status=document.getElementById("status");
+    const openApp=document.getElementById("openApp");
+    let currentUser=null;
+
+    function oldCachedUids(){
+      const uids=[];
+      for(let i=0;i<localStorage.length;i+=1){
+        const key=localStorage.key(i)||"";
+        const match=key.match(/^confesso-que-bebi-v2:([^:]+):entries$/);
+        if(!match)continue;
+        try{
+          const entries=JSON.parse(localStorage.getItem(key)||"[]");
+          if(Array.isArray(entries)&&entries.length)uids.push(match[1]);
+        }catch{}
+      }
+      return [...new Set(uids)];
+    }
+
+    function hasGoogle(user){
+      return Boolean(user?.providerData?.some(item=>item.providerId==="google.com"));
+    }
+
+    function showUser(user){
+      currentUser=user||null;
+      if(!user){
+        intro.textContent="Acesso rápido e persistente neste aparelho.";
+        account.style.display="none";
+        button.style.display="flex";
+        buttonLabel.textContent="Entrar com Google";
+        openApp.style.display="none";
+        status.className="";
+        status.textContent="Use a mesma conta Google/e-mail que já usa no Confesso que bebi.";
+        return;
+      }
+
+      account.style.display="block";
+      account.textContent=`Conta atual: ${user.email||"conta sem e-mail"}`;
+
+      if(hasGoogle(user)){
+        intro.textContent="Pronto. Esta conta já usa acesso rápido com Google.";
+        button.style.display="none";
+        openApp.style.display="flex";
+        status.className="";
+        status.textContent="A sessão fica salva neste aparelho até você clicar em Sair no app.";
+        setTimeout(()=>location.replace("./index.html"),700);
+      }else{
+        intro.textContent="Sua conta atual está aberta. Vincule o Google uma única vez para não depender mais do link por e-mail.";
+        button.style.display="flex";
+        buttonLabel.textContent="Ativar acesso com Google";
+        openApp.style.display="flex";
+        status.className="";
+        status.textContent="Ao vincular agora, o mesmo usuário e os mesmos registros são mantidos.";
+      }
+    }
+
+    function errorMessage(error){
+      const code=String(error?.code||"");
+      const messages={
+        "auth/operation-not-allowed":"O login com Google ainda não está ativado no Firebase deste app.",
+        "auth/popup-blocked":"O navegador bloqueou a janela do Google. Abra esta página diretamente no Chrome e tente de novo.",
+        "auth/popup-closed-by-user":"A janela do Google foi fechada antes de concluir o acesso.",
+        "auth/network-request-failed":"Não foi possível acessar a internet.",
+        "auth/credential-already-in-use":"Esta conta Google já está ligada a outro usuário do Firebase.",
+        "auth/provider-already-linked":"O Google já está vinculado a esta conta.",
+        "auth/account-exists-with-different-credential":"Já existe uma conta com este e-mail em outro método de acesso. Abra o app pelo link de e-mail uma última vez e volte aqui para vincular o Google."
+      };
+      return messages[code]||`Não foi possível concluir o acesso. Código: ${code||"erro-sem-codigo"}`;
+    }
+
+    button.addEventListener("click",async()=>{
+      button.disabled=true;
+      status.className="";
+      status.textContent=currentUser?"Vinculando Google à conta atual...":"Entrando com Google...";
+      try{
+        const beforeUid=currentUser?.uid||null;
+        const result=currentUser
+          ?await linkWithPopup(currentUser,provider)
+          :await signInWithPopup(auth,provider);
+
+        const user=result.user;
+        const cached=oldCachedUids();
+        if(!beforeUid&&cached.length===1&&cached[0]!==user.uid){
+          await signOut(auth);
+          currentUser=null;
+          status.className="error";
+          status.textContent="Proteção de dados: esta conta Google abriu um usuário diferente do que tem seus registros neste aparelho. Entre pelo link de e-mail uma última vez e, com a conta aberta, volte a esta página para vincular o Google sem trocar o usuário.";
+          button.disabled=false;
+          return;
+        }
+
+        status.textContent="Acesso com Google ativado. Abrindo o app...";
+        setTimeout(()=>location.replace("./index.html"),500);
+      }catch(error){
+        console.error(error);
+        status.className="error";
+        status.textContent=errorMessage(error);
+        button.disabled=false;
+      }
+    });
+
+    onAuthStateChanged(auth,user=>showUser(user));
+  </script>
+</body>
+</html>
