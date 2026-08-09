@@ -43,11 +43,11 @@ jobs:
         run: gradle -p android-app :app:assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.2-debug.apk
+        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.3-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Confesso-que-bebi-Android-v0.2
-          path: Confesso-que-bebi-v0.2-debug.apk
+          name: Confesso-que-bebi-Android-v0.3
+          path: Confesso-que-bebi-v0.3-debug.apk
           if-no-files-found: error
