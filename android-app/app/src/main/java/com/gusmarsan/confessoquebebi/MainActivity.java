@@ -2,9 +2,11 @@ package com.gusmarsan.confessoquebebi;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
@@ -14,11 +16,13 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
 
-    private static final String APP_URL = "https://gusmarsan.github.io/confesso-que-bebi/acesso.html";
+    private static final String APP_URL = "https://gusmarsan.github.io/confesso-que-bebi/index.html";
+    private static final String LOGIN_URL = "https://gusmarsan.github.io/confesso-que-bebi/acesso.html";
     private static final String APP_HOST = "gusmarsan.github.io";
     private static final String AUTH_HOST = "confesso-que-bebi.firebaseapp.com";
 
     private WebView webView;
+    private int authProbeAttempts = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,6 +32,8 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(Color.rgb(255, 250, 245));
 
         webView = new WebView(this);
+        webView.setBackgroundColor(Color.rgb(255, 250, 245));
+        webView.setVisibility(View.INVISIBLE);
         setContentView(webView);
         configureWebView();
 
@@ -49,7 +55,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.5");
+        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.5.2");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -63,10 +69,77 @@ public class MainActivity extends Activity {
             }
 
             @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                if (isAppPage(url)) {
+                    authProbeAttempts = 0;
+                    view.setVisibility(View.INVISIBLE);
+                }
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 CookieManager.getInstance().flush();
+                if (isAppPage(url)) {
+                    revealWhenAuthIsReady(view);
+                } else {
+                    view.setVisibility(View.VISIBLE);
+                }
             }
         });
+    }
+
+    private boolean isAppPage(String url) {
+        if (url == null) return false;
+        Uri uri = Uri.parse(url);
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || !APP_HOST.equalsIgnoreCase(uri.getHost())) {
+            return false;
+        }
+        String path = uri.getPath();
+        return "/confesso-que-bebi/".equals(path)
+                || "/confesso-que-bebi/index.html".equals(path);
+    }
+
+    private void revealWhenAuthIsReady(WebView view) {
+        final String probeScript = "(function(){"
+                + "var auth=document.getElementById('authScreen');"
+                + "var sync=document.getElementById('syncStatus');"
+                + "if(auth&&auth.classList.contains('hidden'))return 'in';"
+                + "if(sync&&sync.textContent.trim()==='Desconectado')return 'out';"
+                + "return 'pending';"
+                + "})()";
+
+        view.evaluateJavascript(probeScript, result -> {
+            if ("\"in\"".equals(result)) {
+                installLogoutRedirectWatcher(view);
+                view.setVisibility(View.VISIBLE);
+                return;
+            }
+
+            if ("\"out\"".equals(result)) {
+                view.loadUrl(LOGIN_URL);
+                return;
+            }
+
+            authProbeAttempts++;
+            if (authProbeAttempts < 80) {
+                view.postDelayed(() -> revealWhenAuthIsReady(view), 50);
+            } else {
+                view.loadUrl(LOGIN_URL);
+            }
+        });
+    }
+
+    private void installLogoutRedirectWatcher(WebView view) {
+        final String watcherScript = "(function(){"
+                + "if(window.__cqbLogoutWatcher)return;"
+                + "var auth=document.getElementById('authScreen');"
+                + "if(!auth)return;"
+                + "window.__cqbLogoutWatcher=true;"
+                + "new MutationObserver(function(){"
+                + "if(!auth.classList.contains('hidden'))location.replace('./acesso.html');"
+                + "}).observe(auth,{attributes:true,attributeFilter:['class']});"
+                + "})()";
+        view.evaluateJavascript(watcherScript, null);
     }
 
     private boolean handleNavigation(Uri uri) {
