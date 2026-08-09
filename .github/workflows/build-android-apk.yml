@@ -34,20 +34,43 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Prepare launcher icon
+      - name: Prepare Android launcher icons
         run: |
-          mkdir -p android-app/app/src/main/res/drawable
-          cp icon-512.png android-app/app/src/main/res/drawable/app_icon.png
+          python3 -m pip install --quiet pillow
+          python3 <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          source = Image.open("icon-512.png").convert("RGBA")
+          res = Path("android-app/app/src/main/res")
+
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+
+          for folder, size in sizes.items():
+              target = res / folder
+              target.mkdir(parents=True, exist_ok=True)
+              source.resize((size, size), Image.Resampling.LANCZOS).save(target / "ic_launcher.png")
+
+          foreground = res / "drawable-nodpi"
+          foreground.mkdir(parents=True, exist_ok=True)
+          source.resize((432, 432), Image.Resampling.LANCZOS).save(foreground / "ic_launcher_foreground.png")
+          PY
 
       - name: Build debug APK
         run: gradle -p android-app :app:assembleDebug --stacktrace
 
       - name: Rename APK
-        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.3-debug.apk
+        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.4-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Confesso-que-bebi-Android-v0.3
-          path: Confesso-que-bebi-v0.3-debug.apk
+          name: Confesso-que-bebi-Android-v0.4
+          path: Confesso-que-bebi-v0.4-debug.apk
           if-no-files-found: error
