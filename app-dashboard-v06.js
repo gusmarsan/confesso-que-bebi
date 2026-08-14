@@ -324,13 +324,15 @@
     const hiddenCount = allGroups.filter(week => week.hidden).length;
 
     const weeklyAverage = $("#weeklyAverage");
-    if (weeklyAverage) weeklyAverage.textContent = `${formatNumber(average, 2)} doses`;
+    const averageText = `${formatNumber(average, 2)} doses`;
+    if (weeklyAverage && weeklyAverage.textContent !== averageText) weeklyAverage.textContent = averageText;
 
     const historyAverage = $("#historyAverage");
-    if (historyAverage) historyAverage.textContent = `${formatNumber(average, 2)} doses`;
+    if (historyAverage && historyAverage.textContent !== averageText) historyAverage.textContent = averageText;
 
     const weeksCount = $("#weeksCount");
-    if (weeksCount) weeksCount.textContent = String(visibleGroups.length);
+    const weeksCountText = String(visibleGroups.length);
+    if (weeksCount && weeksCount.textContent !== weeksCountText) weeksCount.textContent = weeksCountText;
 
     const noteParts = [];
     if (markedCount) {
@@ -341,13 +343,15 @@
     }
 
     const note = $("#averageExclusionNote");
-    if (note) note.textContent = noteParts.join(" · ");
+    const noteText = noteParts.join(" · ");
+    if (note && note.textContent !== noteText) note.textContent = noteText;
 
     const historyDetail = $("#historyAverageDetail");
     if (historyDetail) {
-      historyDetail.textContent = visibleGroups.length
+      const detailText = visibleGroups.length
         ? `${visibleGroups.length} ${visibleGroups.length === 1 ? "semana considerada" : "semanas consideradas"} na média${noteParts.length ? ` · ${noteParts.join(" · ")}` : ""}`
         : "Nenhuma semana registrada";
+      if (historyDetail.textContent !== detailText) historyDetail.textContent = detailText;
     }
   }
 
@@ -389,7 +393,7 @@
       card.dataset.cqbWeekKey = week.key;
       card.hidden = week.hidden;
       card.setAttribute("aria-hidden", week.hidden ? "true" : "false");
-      card.querySelectorAll(".cqb-delete-week").forEach(button => button.remove());
+      const existingDeleteButton = card.querySelector(".cqb-delete-week");
 
       if (week.hidden) return;
 
@@ -404,17 +408,21 @@
       }
 
       if (week.entries.length === 0) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "cqb-delete-week";
-        button.textContent = "Excluir semana";
-        button.setAttribute("aria-label", `Excluir semana vazia de ${formatShortDateKey(week.key)}`);
-        button.addEventListener("click", event => {
-          event.preventDefault();
-          event.stopPropagation();
-          hideEmptyWeek(week.key);
-        });
-        card.appendChild(button);
+        if (!existingDeleteButton) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "cqb-delete-week";
+          button.textContent = "Excluir semana";
+          button.setAttribute("aria-label", `Excluir semana vazia de ${formatShortDateKey(week.key)}`);
+          button.addEventListener("click", event => {
+            event.preventDefault();
+            event.stopPropagation();
+            hideEmptyWeek(week.key);
+          });
+          card.appendChild(button);
+        }
+      } else if (existingDeleteButton) {
+        existingDeleteButton.remove();
       }
     });
   }
@@ -517,11 +525,6 @@
     const weekList = $("#weekList");
     if (weekList) {
       new MutationObserver(scheduleRefresh).observe(weekList, { childList: true });
-    }
-
-    const average = $("#weeklyAverage");
-    if (average) {
-      new MutationObserver(scheduleRefresh).observe(average, { childList: true, characterData: true, subtree: true });
     }
 
     scheduleRefresh();
