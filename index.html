@@ -576,7 +576,7 @@
     import {initializeApp} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import {
       initializeAuth,indexedDBLocalPersistence,browserLocalPersistence,onAuthStateChanged,
-      signInWithEmailAndPassword,sendPasswordResetEmail,signOut
+      signInWithEmailAndPassword,signOut
     } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
     import {
       initializeFirestore,getFirestore,persistentLocalCache,persistentMultipleTabManager,
@@ -1517,7 +1517,6 @@
   1 dose-padrão foi calculada como 10 g de álcool puro. Os valores são estimativas baseadas nas informações registradas e não indicam que seja seguro dirigir ou realizar atividades de risco.
 </footer>
 </div>
-  <script type="module" src="./app-enhancements.js?v=0.5.3.2"></script>
 </body>
 </html>`);
       reportWindow.document.close();
@@ -1678,7 +1677,7 @@
     const EMAIL_STORAGE_KEY="confesso-que-bebi-email-link-address";
 
     function setEmailButtonsBusy(activeButton,busy){
-      [el.createUserButton,el.emailLoginButton].forEach(button=>button.disabled=busy);
+      el.emailLoginButton.disabled=busy;
       el.accessEmail.disabled=busy;
       el.accessPassword.disabled=busy;
       if(activeButton){
@@ -1726,27 +1725,6 @@
       }
     });
 
-    el.createUserButton.addEventListener("click",async()=>{
-      const email=el.accessEmail.value.trim().toLowerCase();
-      if(!email){
-        el.authMessage.textContent="Digite primeiro o e-mail da sua conta.";
-        el.accessEmail.focus();
-        return;
-      }
-      setEmailButtonsBusy(el.createUserButton,true);
-      el.authMessage.textContent="Enviando e-mail para definir ou redefinir a senha...";
-      try{
-        localStorage.setItem(EMAIL_STORAGE_KEY,email);
-        await sendPasswordResetEmail(auth,email,{url:"https://gusmarsan.github.io/confesso-que-bebi/"});
-        el.authMessage.textContent="E-mail enviado. Defina a senha e depois volte para entrar.";
-      }catch(error){
-        console.error(error);
-        el.authMessage.textContent=passwordAuthMessage(error);
-      }finally{
-        setEmailButtonsBusy(el.createUserButton,false);
-      }
-    });
-
     el.logoutButton.addEventListener("click",async()=>{
       if(!confirm("Sair da conta neste aparelho?"))return;
       try{
@@ -1770,6 +1748,6 @@
     resetEntryForm();
     renderAll();
   </script>
-  <script type="module" src="./app-enhancements.js?v=0.5.3.2"></script>
+  <script type="module" src="./app-enhancements.js?v=0.5.3.4"></script>
 </body>
 </html>
