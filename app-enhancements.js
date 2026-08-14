@@ -81,17 +81,19 @@
     style.textContent = `
       #atypicalControl{display:none!important}
       .cqb-atypical-day-row{
-        display:flex;justify-content:flex-end;margin:-3px 3px 12px;
+        display:flex;justify-content:flex-end;margin:0;
       }
       .cqb-atypical-day-control{
-        display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:none;
-        color:var(--muted);font:inherit;font-size:.62rem;font-weight:750;cursor:pointer;
+        min-height:44px;display:inline-flex;align-items:center;gap:7px;padding:0 7px;border:0;
+        border-radius:11px;background:none;color:var(--muted);font:inherit;font-size:.69rem;font-weight:750;cursor:pointer;
       }
       .cqb-atypical-day-control::before{
         content:"";width:13px;height:13px;border:1.5px solid currentColor;border-radius:4px;
         box-sizing:border-box;
       }
       .cqb-atypical-day-control.active{color:var(--purple)}
+      .cqb-atypical-day-control:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 34%,transparent);outline-offset:3px}
+      @media(hover:hover) and (pointer:fine){.cqb-atypical-day-control:hover{background:#f4efff;color:var(--purple)}}
       .cqb-atypical-day-control.active::before{
         background:var(--purple);box-shadow:inset 0 0 0 3px var(--paper);
       }
@@ -100,15 +102,15 @@
         pointer-events:none;border:0;padding:0;
       }
       .day.cqb-atypical-day{
-        box-shadow:inset 0 0 0 2px #8158e866;
+        box-shadow:inset 0 0 0 2px #344C7366;
       }
       .day.cqb-atypical-day::after{
         content:"";position:absolute;z-index:4;top:5px;right:5px;width:6px;height:6px;
         border-radius:50%;background:var(--purple);
       }
       .cqb-atypical-day-tag{
-        display:inline-flex;padding:5px 8px;border-radius:999px;background:#8158e812;
-        color:var(--purple);font-size:.58rem;font-weight:850;
+        display:inline-flex;padding:5px 8px;border-radius:999px;background:#344C7312;
+        color:var(--purple);font-size:.69rem;font-weight:850;
       }
     `;
     document.head.appendChild(style);

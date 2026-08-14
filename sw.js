@@ -1,4 +1,4 @@
-const CACHE_NAME = "confesso-que-bebi-pwa-v12";
+const CACHE_NAME = "confesso-que-bebi-pwa-v0.7";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,8 +6,8 @@ const APP_SHELL = [
   "./reset.html",
   "./install.html",
   "./manifest.webmanifest",
-  "./app-enhancements.js",
-  "./app-dashboard-v06.js",
+  "./app-enhancements.js?v=0.7",
+  "./app-dashboard-v06.js?v=0.7",
   "./icon-192.png",
   "./icon-512.png"
 ];

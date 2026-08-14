@@ -151,10 +151,10 @@
     style.textContent = `
       .day.cqb-atypical-day{
         border-color:#ff7b9b70!important;
-        background:linear-gradient(145deg,#fff,#fff3f7)!important;
+        background:#fff3f7!important;
       }
       .day.cqb-atypical-day::before{
-        background:linear-gradient(180deg,rgba(255,183,198,.42),rgba(255,95,122,.62))!important;
+        background:rgba(255,95,122,.44)!important;
       }
       .day.cqb-atypical-day::after{
         background:var(--pink)!important;
@@ -165,21 +165,23 @@
         cursor:pointer;
       }
       #dayGrid .day{cursor:pointer}
-      .cqb-day-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+      .cqb-day-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:nowrap}
       .cqb-day-actions .atypical-control{justify-content:flex-start;margin:0;padding:0}
-      .cqb-day-actions .link-button{padding:0}
+      .cqb-day-actions .link-button{padding:0 7px}
       .cqb-hero-metrics{
         display:grid;grid-template-columns:72px 82px 104px 104px;
         align-items:start;gap:14px;flex:1;min-width:0;
       }
       .cqb-hero-metrics>div{min-width:0}
-      .cqb-hero-metrics span{display:inline-block;line-height:1.18}
+      .cqb-hero-metrics span{display:inline-block;font-weight:600;line-height:1.24;opacity:.94}
       .week-card.cqb-hidden-week{display:none!important}
       .cqb-delete-week{
-        align-self:flex-start;margin-top:9px;padding:3px 0;border:0;background:none;
-        color:#a69bab;font:inherit;font-size:.56rem;font-weight:800;text-decoration:underline;
-        text-underline-offset:2px;cursor:pointer;
+        align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;margin-top:5px;
+        padding:0 7px;border:0;border-radius:10px;background:none;color:#746b7f;font:inherit;
+        font-size:.69rem;font-weight:800;text-decoration:underline;text-underline-offset:3px;cursor:pointer;
       }
+      .cqb-delete-week:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 34%,transparent);outline-offset:3px}
+      @media(hover:hover) and (pointer:fine){.cqb-delete-week:hover{background:#fff1f5;color:var(--danger)}}
       @media(max-width:520px){
         .hero-foot{flex-wrap:wrap;align-items:flex-end}
         .cqb-hero-metrics{width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
