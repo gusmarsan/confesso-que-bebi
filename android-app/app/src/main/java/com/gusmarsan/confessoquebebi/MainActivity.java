@@ -29,11 +29,11 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getWindow().setStatusBarColor(Color.rgb(255, 250, 245));
-        getWindow().setNavigationBarColor(Color.rgb(255, 250, 245));
+        getWindow().setStatusBarColor(Color.rgb(243, 228, 214));
+        getWindow().setNavigationBarColor(Color.rgb(243, 228, 214));
 
         webView = new WebView(this);
-        webView.setBackgroundColor(Color.rgb(255, 250, 245));
+        webView.setBackgroundColor(Color.rgb(243, 228, 214));
         webView.setVisibility(View.INVISIBLE);
         setContentView(webView);
         configureWebView();
@@ -56,7 +56,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.5.3");
+        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.7.1");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -82,6 +82,7 @@ public class MainActivity extends Activity {
                 CookieManager.getInstance().flush();
                 if (isAppPage(url)) {
                     installEnhancements(view);
+                    view.evaluateJavascript("(function(){var v=document.getElementById('appVersion');if(v)v.textContent='v0.7.1';})()", null);
                     revealWhenAuthIsReady(view);
                 } else {
                     view.setVisibility(View.VISIBLE);
@@ -179,7 +180,6 @@ public class MainActivity extends Activity {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, uri));
         } catch (Exception ignored) {
-            // Keep the user inside the app if Android cannot resolve an external URL.
         }
         return true;
     }
