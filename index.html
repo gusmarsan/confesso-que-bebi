@@ -387,7 +387,7 @@
   </style>
 </head>
 <body>
-  <section id="authScreen" class="auth-screen" aria-label="Acesso à conta">
+  <section id="authScreen" class="auth-screen" aria-label="Acesso à conta" style="display:none">
     <form id="emailAccessForm" class="auth-card">
       <div class="auth-brand">
         <div class="brand-mark">🍹</div>
@@ -1514,7 +1514,7 @@
   1 dose-padrão foi calculada como 10 g de álcool puro. Os valores são estimativas baseadas nas informações registradas e não indicam que seja seguro dirigir ou realizar atividades de risco.
 </footer>
 </div>
-  <script type="module" src="./app-enhancements.js?v=0.5.3"></script>
+  <script type="module" src="./app-enhancements.js?v=0.5.4"></script>
 </body>
 </html>`);
       reportWindow.document.close();
@@ -1799,8 +1799,11 @@
     window.addEventListener("offline",updateSyncStatus);
 
     onAuthStateChanged(auth,user=>{
-      if(user)startUserSession(user);
-      else endUserSession();
+      if(user){
+        startUserSession(user);
+        return;
+      }
+      location.replace("./acesso.html");
     });
 
 
@@ -1810,6 +1813,6 @@
     resetEntryForm();
     renderAll();
   </script>
-  <script type="module" src="./app-enhancements.js?v=0.5.3"></script>
+  <script type="module" src="./app-enhancements.js?v=0.5.4"></script>
 </body>
 </html>
