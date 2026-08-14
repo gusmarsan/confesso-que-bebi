@@ -3,7 +3,8 @@
   window.__cqbEnhancementsLoaded = true;
 
   const FIREBASE_VERSION = "12.16.0";
-  const DAY_COLLECTION = "atypicalDays";
+  const DAY_COLLECTION = "atypicalWeeks";
+  const DAY_PREFIX = "day-";
 
   let auth;
   let db;
@@ -162,7 +163,7 @@
       const { collection, doc, setDoc, deleteDoc, serverTimestamp } = await import(
         `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`
       );
-      const reference = doc(collection(db, "users", currentUser.uid, DAY_COLLECTION), key);
+      const reference = doc(collection(db, "users", currentUser.uid, DAY_COLLECTION), `${DAY_PREFIX}${key}`);
       const alreadyMarked = atypicalDays.has(key);
 
       try {
@@ -170,7 +171,7 @@
           await deleteDoc(reference);
           showToast(`Dia ${formatShortDateKey(key)} voltou a contar na média.`);
         } else {
-          await setDoc(reference, { key, atypical: true, updatedAt: serverTimestamp() }, { merge: true });
+          await setDoc(reference, { key, atypical: true, kind: "day", updatedAt: serverTimestamp() }, { merge: true });
           showToast(`Dia ${formatShortDateKey(key)} marcado como atípico.`);
         }
       } catch (error) {
@@ -349,8 +350,8 @@
     stopDays = onSnapshot(collection(db, "users", user.uid, DAY_COLLECTION), snapshot => {
       atypicalDays = new Set(
         snapshot.docs
-          .filter(item => item.data()?.atypical !== false)
-          .map(item => item.id)
+          .filter(item => item.id.startsWith(DAY_PREFIX) && item.data()?.atypical !== false)
+          .map(item => item.id.slice(DAY_PREFIX.length))
       );
       scheduleRefresh();
     });
