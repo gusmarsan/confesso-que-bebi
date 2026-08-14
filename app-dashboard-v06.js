@@ -64,11 +64,13 @@
 
   function formatDayLabel(key) {
     const date = parseDateKey(key);
-    return new Intl.DateTimeFormat("pt-BR", {
+    const formatted = new Intl.DateTimeFormat("pt-BR", {
       weekday: "long",
       day: "2-digit",
-      month: "2-digit"
+      month: "2-digit",
+      year: "numeric"
     }).format(date);
+    return formatted.charAt(0).toLocaleUpperCase("pt-BR") + formatted.slice(1);
   }
 
   function selectedWeekStart() {
@@ -163,9 +165,11 @@
       }
       #dayGrid .day{cursor:pointer}
       .cqb-hero-metrics{
-        display:flex;align-items:flex-start;gap:18px;
+        display:grid;grid-template-columns:72px 82px 104px 104px;
+        align-items:start;gap:14px;flex:1;min-width:0;
       }
-      .cqb-hero-metrics>div{min-width:76px}
+      .cqb-hero-metrics>div{min-width:0}
+      .cqb-hero-metrics span{display:inline-block;line-height:1.18}
       .cqb-delete-week{
         align-self:flex-start;margin-top:9px;padding:3px 0;border:0;background:none;
         color:#a69bab;font:inherit;font-size:.56rem;font-weight:800;text-decoration:underline;
@@ -173,6 +177,7 @@
       }
       @media(max-width:520px){
         .hero-foot{flex-wrap:wrap;align-items:flex-end}
+        .cqb-hero-metrics{width:100%;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
         .hero-actions{width:100%;justify-content:flex-end}
       }
     `;
@@ -195,6 +200,14 @@
     const weekBlock = document.createElement("div");
     weekBlock.innerHTML = '<span>Doses na semana</span><br><b id="cqbWeekDoses">0 doses</b>';
     metrics.appendChild(weekBlock);
+
+    const previousWeekBlock = document.createElement("div");
+    previousWeekBlock.innerHTML = '<span>Doses da semana passada</span><br><b id="cqbPreviousWeekDoses">0 doses</b>';
+    metrics.appendChild(previousWeekBlock);
+
+    const twoWeeksAgoBlock = document.createElement("div");
+    twoWeeksAgoBlock.innerHTML = '<span>Doses da semana retrasada</span><br><b id="cqbTwoWeeksAgoDoses">0 doses</b>';
+    metrics.appendChild(twoWeeksAgoBlock);
   }
 
   function ensureSelectedDay() {
@@ -229,8 +242,12 @@
     const key = ensureSelectedDay();
     const dayEntries = entriesForDay(key);
     const weekEntries = entriesForWeek(start);
+    const previousWeekEntries = entriesForWeek(addDays(start, -7));
+    const twoWeeksAgoEntries = entriesForWeek(addDays(start, -14));
     const dayDoses = dayEntries.reduce((sum, item) => sum + Number(item.doses || 0), 0);
     const weekDoses = weekEntries.reduce((sum, item) => sum + Number(item.doses || 0), 0);
+    const previousWeekDoses = previousWeekEntries.reduce((sum, item) => sum + Number(item.doses || 0), 0);
+    const twoWeeksAgoDoses = twoWeeksAgoEntries.reduce((sum, item) => sum + Number(item.doses || 0), 0);
     const weekGrams = weekEntries.reduce((sum, item) => sum + Number(item.grams || 0), 0);
 
     const label = $(".hero-label");
@@ -247,6 +264,12 @@
 
     const weekTotal = $("#cqbWeekDoses");
     if (weekTotal) weekTotal.textContent = `${formatNumber(weekDoses, 2)} doses`;
+
+    const previousWeekTotal = $("#cqbPreviousWeekDoses");
+    if (previousWeekTotal) previousWeekTotal.textContent = `${formatNumber(previousWeekDoses, 2)} doses`;
+
+    const twoWeeksAgoTotal = $("#cqbTwoWeeksAgoDoses");
+    if (twoWeeksAgoTotal) twoWeeksAgoTotal.textContent = `${formatNumber(twoWeeksAgoDoses, 2)} doses`;
   }
 
   function installDaySelection() {
@@ -504,5 +527,5 @@
     scheduleRefresh();
   }
 
-  init().catch(error => console.error("Falha ao carregar dashboard v0.6", error));
+  init().catch(error => console.error("Falha ao carregar dashboard v0.6.2", error));
 })();
