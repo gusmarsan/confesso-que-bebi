@@ -18,16 +18,14 @@ new = '''    function moveWeek(offset){\n      const next=startOfWeek(addDays(se
 assert old in text, 'navigation anchor not found'
 text = text.replace(old, new, 1)
 
-# Keep the previous-week control visibly disabled at the history floor.
-old = '      el.nextWeek.disabled=isCurrentSelectedWeek();'
-new = '      el.nextWeek.disabled=isCurrentSelectedWeek();\n      el.previousWeek.disabled=weekKey(selectedWeekStart)===weekKey(HISTORY_START);'
+old = '      el.nextWeek.disabled=current;'
+new = '      el.nextWeek.disabled=current;\n      el.previousWeek.disabled=weekKey(selectedWeekStart)===weekKey(HISTORY_START);'
 assert old in text, 'renderDashboard button anchor not found'
 text = text.replace(old, new, 1)
 
 index_path.write_text(text, encoding='utf-8')
 
-version = Path('version.txt')
-version.write_text('0.6.8\n', encoding='utf-8')
+Path('version.txt').write_text('0.6.8\n', encoding='utf-8')
 
 sw = Path('sw.js')
 if sw.exists():
