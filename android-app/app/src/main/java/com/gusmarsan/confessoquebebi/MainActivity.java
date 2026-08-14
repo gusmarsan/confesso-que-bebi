@@ -18,6 +18,7 @@ public class MainActivity extends Activity {
 
     private static final String APP_URL = "https://gusmarsan.github.io/confesso-que-bebi/index.html";
     private static final String LOGIN_URL = "https://gusmarsan.github.io/confesso-que-bebi/acesso.html";
+    private static final String ENHANCEMENTS_URL = "https://gusmarsan.github.io/confesso-que-bebi/app-enhancements.js";
     private static final String APP_HOST = "gusmarsan.github.io";
     private static final String AUTH_HOST = "confesso-que-bebi.firebaseapp.com";
 
@@ -55,7 +56,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.5.2");
+        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.5.3");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -80,6 +81,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 CookieManager.getInstance().flush();
                 if (isAppPage(url)) {
+                    installEnhancements(view);
                     revealWhenAuthIsReady(view);
                 } else {
                     view.setVisibility(View.VISIBLE);
@@ -97,6 +99,17 @@ public class MainActivity extends Activity {
         String path = uri.getPath();
         return "/confesso-que-bebi/".equals(path)
                 || "/confesso-que-bebi/index.html".equals(path);
+    }
+
+    private void installEnhancements(WebView view) {
+        final String script = "(function(){"
+                + "if(document.getElementById('cqb-enhancements-script'))return;"
+                + "var s=document.createElement('script');"
+                + "s.id='cqb-enhancements-script';"
+                + "s.src='" + ENHANCEMENTS_URL + "?ts='+Date.now();"
+                + "document.head.appendChild(s);"
+                + "})()";
+        view.evaluateJavascript(script, null);
     }
 
     private void revealWhenAuthIsReady(WebView view) {
