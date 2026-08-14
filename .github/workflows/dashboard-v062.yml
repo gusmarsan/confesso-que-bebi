@@ -1,0 +1,60 @@
+name: Dashboard v0.6.2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/dashboard-v062.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: dashboard-v062-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply dashboard v0.6.2
+        run: python scripts/dashboard_v062.py
+
+      - name: Validate JavaScript
+        run: node --check app-dashboard-v06.js
+
+      - name: Validate requested UI
+        run: |
+          grep -q 'year: "numeric"' app-dashboard-v06.js
+          grep -q 'Doses da semana passada' app-dashboard-v06.js
+          grep -q 'Doses da semana retrasada' app-dashboard-v06.js
+          grep -q 'app-dashboard-v06.js?v=0.6.2' index.html
+          grep -q '^0.6.2$' version.txt
+
+      - name: Commit v0.6.2
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-dashboard-v06.js index.html version.txt
+          git commit -m "Update hero comparisons v0.6.2"
+          git push
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
