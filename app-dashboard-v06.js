@@ -403,7 +403,7 @@
         }
       }
 
-      if (week.entries.length === 0 && week.key !== currentKey) {
+      if (week.entries.length === 0) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "cqb-delete-week";
