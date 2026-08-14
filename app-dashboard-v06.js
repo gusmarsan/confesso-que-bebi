@@ -324,10 +324,12 @@
   function updateAveragesAndCounts() {
     const allGroups = allCalendarWeeks();
     const visibleGroups = allGroups.filter(week => !week.hidden);
-    const average = visibleGroups.length
-      ? visibleGroups.reduce((sum, week) => sum + week.adjustedDoses, 0) / visibleGroups.length
+    const now = new Date();
+    const averageGroups = visibleGroups.filter(week => addDays(week.start, 7) <= now);
+    const average = averageGroups.length
+      ? averageGroups.reduce((sum, week) => sum + week.adjustedDoses, 0) / averageGroups.length
       : 0;
-    const markedCount = visibleGroups.reduce((sum, week) => sum + week.markedDays.length, 0);
+    const markedCount = averageGroups.reduce((sum, week) => sum + week.markedDays.length, 0);
     const hiddenCount = allGroups.filter(week => week.hidden).length;
 
     const weeklyAverage = $("#weeklyAverage");
@@ -354,9 +356,9 @@
 
     const historyDetail = $("#historyAverageDetail");
     if (historyDetail) {
-      const detailText = visibleGroups.length
-        ? `${visibleGroups.length} ${visibleGroups.length === 1 ? "semana considerada" : "semanas consideradas"} na média${historyNoteParts.length ? ` · ${historyNoteParts.join(" · ")}` : ""}`
-        : "Nenhuma semana registrada";
+      const detailText = averageGroups.length
+        ? `${averageGroups.length} ${averageGroups.length === 1 ? "semana considerada" : "semanas consideradas"} na média${historyNoteParts.length ? ` · ${historyNoteParts.join(" · ")}` : ""}`
+        : "Nenhuma semana encerrada";
       if (historyDetail.textContent !== detailText) historyDetail.textContent = detailText;
     }
   }
