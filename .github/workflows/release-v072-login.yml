@@ -71,24 +71,19 @@ jobs:
 
           main = Path('android-app/app/src/main/java/com/gusmarsan/confessoquebebi/MainActivity.java').read_text(encoding='utf-8')
           main = main.replace('ConfessoQueBebiAndroid/0.7.1', 'ConfessoQueBebiAndroid/0.7.2')
-          main = main.replace("v0.7.1", "v0.7.2")
+          main = main.replace('v0.7.1', 'v0.7.2')
           write('android-app/app/src/main/java/com/gusmarsan/confessoquebebi/MainActivity.java', main)
 
           gradle = Path('android-app/app/build.gradle.kts').read_text(encoding='utf-8')
           gradle = gradle.replace('versionCode = 8', 'versionCode = 9')
           gradle = gradle.replace('versionName = "0.7.1"', 'versionName = "0.7.2"')
           write('android-app/app/build.gradle.kts', gradle)
-
-          build = Path('.github/workflows/build-android-apk.yml').read_text(encoding='utf-8')
-          build = build.replace('v0.7.1', 'v0.7.2')
-          write('.github/workflows/build-android-apk.yml', build)
           PY
 
       - name: Commit release
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/release-v072-login.yml
-          git add acesso.html reset.html icon-192.png icon-512.png index.html sw.js version.txt android-app .github/workflows/build-android-apk.yml
+          git add acesso.html reset.html icon-192.png icon-512.png index.html sw.js version.txt android-app
           git commit -m "Release v0.7.2 login palette refresh"
           git push
