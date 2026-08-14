@@ -1,0 +1,70 @@
+name: History start v0.6.8
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/history-start-v068.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply v0.6.8
+        run: python .github/scripts/history-start-v068.py
+
+      - name: Validate JavaScript
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('index.html').read_text(encoding='utf-8')
+          start = text.index('<script type="module">') + len('<script type="module">')
+          end = text.index('</script>', start)
+          Path('/tmp/main.js').write_text(text[start:end], encoding='utf-8')
+          PY
+          node --check /tmp/main.js
+
+      - name: Validate history start
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('index.html').read_text(encoding='utf-8')
+          assert 'const HISTORY_START=startOfWeek(new Date(2026,6,27));' in text
+          assert 'if(next>current||next<HISTORY_START)return;' in text
+          assert 'el.previousWeek.disabled=weekKey(selectedWeekStart)===weekKey(HISTORY_START);' in text
+          assert Path('version.txt').read_text().strip() == '0.6.8'
+          assert 'confesso-que-bebi-pwa-v5' in Path('sw.js').read_text(encoding='utf-8')
+          PY
+
+      - name: Commit v0.6.8
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js version.txt
+          git diff --cached --quiet || git commit -m 'Set history start to 27 July 2026 v0.6.8'
+          git push
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
