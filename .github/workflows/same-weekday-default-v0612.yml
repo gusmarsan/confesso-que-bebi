@@ -1,0 +1,74 @@
+name: Same weekday default v0.6.12
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/same-weekday-default-v0612.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply v0.6.12
+        run: python .github/scripts/same-weekday-default-v0612.py
+
+      - name: Validate JavaScript
+        run: |
+          node --check app-dashboard-v06.js
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('index.html').read_text(encoding='utf-8')
+          start = text.index('<script type="module">') + len('<script type="module">')
+          end = text.index('</script>', start)
+          Path('/tmp/main.js').write_text(text[start:end], encoding='utf-8')
+          PY
+          node --check /tmp/main.js
+
+      - name: Validate same weekday default
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          dash = Path('app-dashboard-v06.js').read_text(encoding='utf-8')
+          index = Path('index.html').read_text(encoding='utf-8')
+          assert 'const weekdayOffset = (today.getDay() + 6) % 7;' in dash
+          assert 'selectedDayKey = dateKey(addDays(start, weekdayOffset));' in dash
+          assert 'weekEntries.length' not in dash[dash.index('function ensureSelectedDay'):dash.index('function updateHero')]
+          assert '>v0.6.12</span>' in index
+          assert 'app-dashboard-v06.js?v=0.6.12' in index
+          assert Path('version.txt').read_text().strip() == '0.6.12'
+          assert 'confesso-que-bebi-pwa-v9' in Path('sw.js').read_text(encoding='utf-8')
+          PY
+
+      - name: Commit v0.6.12
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app-dashboard-v06.js index.html sw.js version.txt
+          git diff --cached --quiet || git commit -m 'Use same weekday as default in past weeks v0.6.12'
+          git push
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
