@@ -15,6 +15,7 @@
   let atypicalDays = new Set();
   let hiddenWeeks = new Set();
   let selectedDayKey = null;
+  let selectedDayIsExplicit = false;
   let stopEntries = null;
   let stopSettings = null;
   let refreshTimer = null;
@@ -284,6 +285,7 @@
       const key = card?.dataset?.cqbDate;
       if (!key) return;
       selectedDayKey = key;
+      selectedDayIsExplicit = true;
       scheduleRefresh();
     };
 
@@ -306,6 +308,8 @@
     if (!cards.length) return;
     const start = selectedWeekStart();
     const selected = ensureSelectedDay();
+    const isCurrentWeek = weekKey(start) === weekKey(new Date());
+    const showSelection = isCurrentWeek || selectedDayIsExplicit;
 
     cards.forEach((card, index) => {
       const key = dateKey(addDays(start, index));
@@ -313,7 +317,7 @@
       card.tabIndex = 0;
       card.setAttribute("role", "button");
       card.setAttribute("aria-label", `Conferir doses de ${formatShortDateKey(key)}`);
-      card.classList.toggle("cqb-selected-day", key === selected);
+      card.classList.toggle("cqb-selected-day", showSelection && key === selected);
     });
   }
 
@@ -523,6 +527,7 @@
     atypicalDays = new Set();
     hiddenWeeks = new Set();
     selectedDayKey = null;
+    selectedDayIsExplicit = false;
   }
 
   async function startListeners(user) {
@@ -578,6 +583,7 @@
     if (selectedWeekDates) {
       new MutationObserver(() => {
         selectedDayKey = null;
+        selectedDayIsExplicit = false;
         scheduleRefresh();
       }).observe(selectedWeekDates, { childList: true, characterData: true, subtree: true });
     }
