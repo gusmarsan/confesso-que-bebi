@@ -394,28 +394,31 @@
         <div><h1>Confesso que bebi</h1><p>Seus registros sincronizados em todos os aparelhos</p></div>
       </div>
 
-      <h2>Acesse sem senha</h2>
-      <p class="auth-intro">Digite seu e-mail. Você receberá um link para criar ou acessar o usuário.</p>
+      <h2>Entrar</h2>
+      <p class="auth-intro">Use seu e-mail e senha. Depois do primeiro acesso, a sessão fica salva neste navegador.</p>
 
       <div class="auth-field">
         <label for="accessEmail">E-mail</label>
         <input id="accessEmail" type="email" autocomplete="email" inputmode="email" required>
       </div>
 
-      <button id="createUserButton" class="create-user-button" type="button">
-        <span class="create-user-icon">＋</span>
-        <span class="button-label">Criar usuário</span>
-      </button>
+      <div class="auth-field">
+        <label for="accessPassword">Senha</label>
+        <input id="accessPassword" type="password" autocomplete="current-password" minlength="6" required>
+      </div>
 
-      <div class="auth-divider"><span>ou</span></div>
-
-      <button id="emailLoginButton" class="google-button" type="button">
-        <span class="google-icon">✉</span>
+      <button id="emailLoginButton" class="create-user-button" type="submit">
+        <span class="google-icon">↗</span>
         <span class="button-label">Entrar</span>
       </button>
 
+      <button id="createUserButton" class="google-button" type="button" style="margin-top:10px">
+        <span class="google-icon">✉</span>
+        <span class="button-label">Definir ou redefinir senha</span>
+      </button>
+
       <p id="authMessage" class="auth-message" role="status"></p>
-      <p class="auth-note">Nos dois casos, enviaremos um link ao e-mail. Depois do acesso, a sessão fica salva neste aparelho até você clicar em Sair.</p>
+      <p class="auth-note">Depois de entrar, você continua conectado neste aparelho até clicar em Sair.</p>
     </form>
   </section>
 
@@ -574,7 +577,7 @@
     import {initializeApp} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
     import {
       initializeAuth,indexedDBLocalPersistence,browserLocalPersistence,onAuthStateChanged,
-      sendSignInLinkToEmail,isSignInWithEmailLink,signInWithEmailLink,signOut
+      signInWithEmailAndPassword,sendPasswordResetEmail,signOut
     } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
     import {
       initializeFirestore,getFirestore,persistentLocalCache,persistentMultipleTabManager,
@@ -690,6 +693,7 @@
       authScreen:$("#authScreen"),
       emailAccessForm:$("#emailAccessForm"),
       accessEmail:$("#accessEmail"),
+      accessPassword:$("#accessPassword"),
       createUserButton:$("#createUserButton"),
       emailLoginButton:$("#emailLoginButton"),
       authMessage:$("#authMessage"),
@@ -1674,117 +1678,75 @@
 
     const EMAIL_STORAGE_KEY="confesso-que-bebi-email-link-address";
 
-    const APP_URL="https://gusmarsan.github.io/confesso-que-bebi/";
-
-    function cleanCurrentUrl(){
-      return APP_URL;
-    }
-
     function setEmailButtonsBusy(activeButton,busy){
-      [el.createUserButton,el.emailLoginButton].forEach(button=>{
-        button.disabled=busy;
-      });
+      [el.createUserButton,el.emailLoginButton].forEach(button=>button.disabled=busy);
+      el.accessEmail.disabled=busy;
+      el.accessPassword.disabled=busy;
       if(activeButton){
         const label=activeButton.querySelector(".button-label");
         if(label){
           if(!label.dataset.original)label.dataset.original=label.textContent;
-          label.textContent=busy?"Enviando...":label.dataset.original;
+          label.textContent=busy?"Aguarde...":label.dataset.original;
         }
       }
     }
 
-    function emailLinkMessage(error){
+    function passwordAuthMessage(error){
       const code=String(error?.code||"erro-sem-codigo");
       const messages={
-        "auth/invalid-email":"Digite um e-mail válido.",
-        "auth/missing-email":"Digite seu e-mail.",
-        "auth/unauthorized-continue-uri":"O endereço do GitHub precisa estar autorizado no Firebase.",
-        "auth/operation-not-allowed":"Ative o link por e-mail em Authentication → Método de login → E-mail/senha.",
+        "auth/invalid-credential":"E-mail ou senha incorretos.",
+        "auth/wrong-password":"Senha incorreta.",
+        "auth/user-not-found":"Não encontrei uma conta com este e-mail.",
+        "auth/invalid-email":"Confira o endereço de e-mail.",
+        "auth/too-many-requests":"Muitas tentativas seguidas. Tente novamente depois.",
         "auth/network-request-failed":"Não foi possível acessar a internet.",
-        "auth/invalid-action-code":"Este link expirou ou já foi usado. Peça um novo.",
-        "auth/expired-action-code":"Este link expirou. Peça um novo.",
-        "auth/quota-exceeded":"O limite diário de links por e-mail do plano gratuito foi atingido. Tente novamente amanhã.",
-        "auth/too-many-requests":"Foram feitas muitas tentativas. Aguarde e tente novamente mais tarde.",
-        "auth/app-not-authorized":"Este endereço não está autorizado para usar o Firebase.",
-        "auth/invalid-api-key":"A configuração do Firebase está inválida."
+        "auth/operation-not-allowed":"O acesso por e-mail e senha não está habilitado no Firebase."
       };
       return messages[code]||`Não foi possível concluir o acesso. Código: ${code}`;
     }
 
-    async function sendAccessLink(intent,button){
+    el.emailAccessForm.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const email=el.accessEmail.value.trim().toLowerCase();
+      const password=el.accessPassword.value;
+      if(!email||password.length<6){
+        el.authMessage.textContent="Digite o e-mail e uma senha com pelo menos 6 caracteres.";
+        return;
+      }
+      setEmailButtonsBusy(el.emailLoginButton,true);
+      el.authMessage.textContent="Entrando...";
+      try{
+        localStorage.setItem(EMAIL_STORAGE_KEY,email);
+        await signInWithEmailAndPassword(auth,email,password);
+        el.authMessage.textContent="";
+      }catch(error){
+        console.error(error);
+        el.authMessage.textContent=passwordAuthMessage(error);
+      }finally{
+        setEmailButtonsBusy(el.emailLoginButton,false);
+      }
+    });
+
+    el.createUserButton.addEventListener("click",async()=>{
       const email=el.accessEmail.value.trim().toLowerCase();
       if(!email){
-        el.authMessage.textContent="Digite seu e-mail.";
+        el.authMessage.textContent="Digite primeiro o e-mail da sua conta.";
         el.accessEmail.focus();
         return;
       }
-
-      setEmailButtonsBusy(button,true);
-      el.authMessage.textContent="";
-
+      setEmailButtonsBusy(el.createUserButton,true);
+      el.authMessage.textContent="Enviando e-mail para definir ou redefinir a senha...";
       try{
-        const actionCodeSettings={
-          url:cleanCurrentUrl(),
-          handleCodeInApp:true
-        };
-
-        await sendSignInLinkToEmail(auth,email,actionCodeSettings);
         localStorage.setItem(EMAIL_STORAGE_KEY,email);
-        localStorage.setItem("confesso-que-bebi-auth-intent",intent);
-        el.authMessage.textContent=`Enviamos um link para ${email}. Abra o e-mail e toque no link.`;
-      }catch(error){
-        console.error("Falha ao enviar link:",error?.code,error);
-        el.authMessage.textContent=emailLinkMessage(error);
-      }finally{
-        setEmailButtonsBusy(button,false);
-      }
-    }
-
-    el.createUserButton.addEventListener("click",()=>{
-      sendAccessLink("create",el.createUserButton);
-    });
-
-    el.emailLoginButton.addEventListener("click",()=>{
-      sendAccessLink("login",el.emailLoginButton);
-    });
-
-    el.emailAccessForm.addEventListener("submit",event=>{
-      event.preventDefault();
-      sendAccessLink("login",el.emailLoginButton);
-    });
-
-    async function finishEmailLinkAccess(){
-      if(!isSignInWithEmailLink(auth,window.location.href))return;
-
-      let email=localStorage.getItem(EMAIL_STORAGE_KEY)||"";
-      if(!email){
-        email=window.prompt("Confirme o e-mail usado para pedir o link:")?.trim().toLowerCase()||"";
-      }
-
-      if(!email){
-        el.authMessage.textContent="Digite o mesmo e-mail usado para pedir o link.";
-        return;
-      }
-
-      el.authMessage.textContent="Concluindo o acesso...";
-
-      try{
-        await signInWithEmailLink(auth,email,window.location.href);
-        localStorage.setItem(EMAIL_STORAGE_KEY,email);
-        el.accessEmail.value=email;
-
-        const intent=localStorage.getItem("confesso-que-bebi-auth-intent");
-        if(intent==="create"){
-          toast("Usuário criado ou acessado.");
-        }
-
-        localStorage.removeItem("confesso-que-bebi-auth-intent");
-        history.replaceState({},document.title,cleanCurrentUrl());
+        await sendPasswordResetEmail(auth,email,{url:"https://gusmarsan.github.io/confesso-que-bebi/"});
+        el.authMessage.textContent="E-mail enviado. Defina a senha e depois volte para entrar.";
       }catch(error){
         console.error(error);
-        el.authMessage.textContent=emailLinkMessage(error);
+        el.authMessage.textContent=passwordAuthMessage(error);
+      }finally{
+        setEmailButtonsBusy(el.createUserButton,false);
       }
-    }
+    });
 
     el.logoutButton.addEventListener("click",async()=>{
       if(!confirm("Sair da conta neste aparelho?"))return;
@@ -1805,7 +1767,6 @@
 
 
     el.accessEmail.value=localStorage.getItem(EMAIL_STORAGE_KEY)||"";
-    finishEmailLinkAccess();
 
     resetEntryForm();
     renderAll();
