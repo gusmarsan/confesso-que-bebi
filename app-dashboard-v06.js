@@ -18,6 +18,8 @@
   let stopEntries = null;
   let stopSettings = null;
   let refreshTimer = null;
+  let hiddenWeekNavigationDirection = -1;
+  let skippingHiddenWeek = false;
 
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
@@ -373,6 +375,9 @@
         { key, hidden: true, atypical: false, kind: "hidden-week", updatedAt: serverTimestamp() },
         { merge: true }
       );
+      hiddenWeeks.add(key);
+      hiddenWeekNavigationDirection = -1;
+      scheduleRefresh();
       showToast("Semana vazia excluída.");
     } catch (error) {
       console.error("Não foi possível excluir a semana vazia", error);
@@ -445,8 +450,58 @@
     window.__cqbDashboardToastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
   }
 
+  function installWeekNavigationGuard() {
+    const previous = $("#previousWeek");
+    const next = $("#nextWeek");
+
+    if (previous && previous.dataset.cqbHiddenWeekGuard !== "1") {
+      previous.dataset.cqbHiddenWeekGuard = "1";
+      previous.addEventListener("click", () => {
+        if (!skippingHiddenWeek) hiddenWeekNavigationDirection = -1;
+      }, true);
+    }
+
+    if (next && next.dataset.cqbHiddenWeekGuard !== "1") {
+      next.dataset.cqbHiddenWeekGuard = "1";
+      next.addEventListener("click", () => {
+        if (!skippingHiddenWeek) hiddenWeekNavigationDirection = 1;
+      }, true);
+    }
+  }
+
+  function ensureSelectedWeekVisible() {
+    const selectedKey = weekKey(selectedWeekStart());
+    if (!hiddenWeeks.has(selectedKey)) return false;
+    if (skippingHiddenWeek) return true;
+
+    let direction = hiddenWeekNavigationDirection || -1;
+    let button = direction > 0 ? $("#nextWeek") : $("#previousWeek");
+
+    if ((!button || button.disabled) && direction > 0) {
+      direction = -1;
+      button = $("#previousWeek");
+    } else if ((!button || button.disabled) && direction < 0) {
+      direction = 1;
+      button = $("#nextWeek");
+    }
+
+    if (!button || button.disabled) return false;
+
+    hiddenWeekNavigationDirection = direction;
+    skippingHiddenWeek = true;
+    selectedDayKey = null;
+    setTimeout(() => {
+      button.click();
+      skippingHiddenWeek = false;
+      scheduleRefresh();
+    }, 0);
+    return true;
+  }
+
   function refresh() {
     injectStyles();
+    installWeekNavigationGuard();
+    if (ensureSelectedWeekVisible()) return;
     installHeroMetrics();
     updateHero();
     updateDayCards();
@@ -498,6 +553,7 @@
 
   async function init() {
     injectStyles();
+    installWeekNavigationGuard();
     installHeroMetrics();
     installDaySelection();
 
