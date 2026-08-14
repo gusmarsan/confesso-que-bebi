@@ -335,22 +335,24 @@
     const weeksCountText = String(visibleGroups.length);
     if (weeksCount && weeksCount.textContent !== weeksCountText) weeksCount.textContent = weeksCountText;
 
-    const noteParts = [];
+    const mainNoteParts = [];
     if (markedCount) {
-      noteParts.push(`${markedCount} ${markedCount === 1 ? "dia atípico desconsiderado" : "dias atípicos desconsiderados"}`);
+      mainNoteParts.push(`${markedCount} ${markedCount === 1 ? "dia atípico desconsiderado" : "dias atípicos desconsiderados"}`);
     }
+
+    const historyNoteParts = [...mainNoteParts];
     if (hiddenCount) {
-      noteParts.push(`${hiddenCount} ${hiddenCount === 1 ? "semana vazia excluída" : "semanas vazias excluídas"}`);
+      historyNoteParts.push(`${hiddenCount} ${hiddenCount === 1 ? "semana vazia excluída" : "semanas vazias excluídas"}`);
     }
 
     const note = $("#averageExclusionNote");
-    const noteText = noteParts.join(" · ");
+    const noteText = mainNoteParts.join(" · ");
     if (note && note.textContent !== noteText) note.textContent = noteText;
 
     const historyDetail = $("#historyAverageDetail");
     if (historyDetail) {
       const detailText = visibleGroups.length
-        ? `${visibleGroups.length} ${visibleGroups.length === 1 ? "semana considerada" : "semanas consideradas"} na média${noteParts.length ? ` · ${noteParts.join(" · ")}` : ""}`
+        ? `${visibleGroups.length} ${visibleGroups.length === 1 ? "semana considerada" : "semanas consideradas"} na média${historyNoteParts.length ? ` · ${historyNoteParts.join(" · ")}` : ""}`
         : "Nenhuma semana registrada";
       if (historyDetail.textContent !== detailText) historyDetail.textContent = detailText;
     }
