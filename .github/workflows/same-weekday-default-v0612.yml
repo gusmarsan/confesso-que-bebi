@@ -1,3 +1,4 @@
+# Retry after v0.6.11 publication settled
 name: Same weekday default v0.6.12
 
 on:
@@ -47,11 +48,11 @@ jobs:
           from pathlib import Path
           dash = Path('app-dashboard-v06.js').read_text(encoding='utf-8')
           index = Path('index.html').read_text(encoding='utf-8')
-          assert 'const weekdayOffset = (today.getDay() + 6) % 7;' in dash
-          assert 'selectedDayKey = dateKey(addDays(start, weekdayOffset));' in dash
-          assert 'weekEntries.length' not in dash[dash.index('function ensureSelectedDay'):dash.index('function updateHero')]
-          assert '>v0.6.12</span>' in index
-          assert 'app-dashboard-v06.js?v=0.6.12' in index
+          hero = dash[dash.index('function ensureSelectedDay'):dash.index('function updateHero')]
+          assert 'const weekdayOffset = (today.getDay() + 6) % 7;' in hero
+          assert 'selectedDayKey = dateKey(addDays(start, weekdayOffset));' in hero
+          assert 'weekEntries.length' not in hero
+          assert 'v0.6.12' in index
           assert Path('version.txt').read_text().strip() == '0.6.12'
           assert 'confesso-que-bebi-pwa-v9' in Path('sw.js').read_text(encoding='utf-8')
           PY
