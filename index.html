@@ -76,6 +76,9 @@
         var(--paper);
     }
     .auth-screen.hidden{display:none}
+    body.auth-pending .auth-screen,
+    body.auth-pending .app,
+    body.auth-pending .bottom-nav{visibility:hidden!important}
     .auth-card{
       width:min(100%,390px);padding:25px;border:1px solid var(--line);border-radius:26px;
       background:#fff;box-shadow:var(--shadow);
@@ -386,7 +389,8 @@
     }
   </style>
 </head>
-<body>
+<body class="auth-pending">
+  <script>setTimeout(()=>document.body.classList.remove("auth-pending"),4000)</script>
   <section id="authScreen" class="auth-screen" aria-label="Acesso à conta">
     <form id="emailAccessForm" class="auth-card">
       <div class="auth-brand">
@@ -1740,6 +1744,7 @@
     onAuthStateChanged(auth,user=>{
       if(user)startUserSession(user);
       else endUserSession();
+      requestAnimationFrame(()=>document.body.classList.remove("auth-pending"));
     });
 
 
