@@ -230,13 +230,8 @@
       return selectedDayKey;
     }
 
-    const weekEntries = entriesForWeek(start)
-      .filter(item => typeof item.datetime === "string")
-      .sort((a, b) => b.datetime.localeCompare(a.datetime));
-
-    selectedDayKey = weekEntries.length
-      ? String(weekEntries[0].datetime).slice(0, 10)
-      : dateKey(start);
+    const weekdayOffset = (today.getDay() + 6) % 7; // segunda = 0 ... domingo = 6
+    selectedDayKey = dateKey(addDays(start, weekdayOffset));
     return selectedDayKey;
   }
 
