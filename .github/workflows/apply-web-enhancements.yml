@@ -1,0 +1,46 @@
+name: Apply web enhancements
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/apply-web-enhancements.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Connect enhancements to web app
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+          marker = '<script type="module" src="./app-enhancements.js?v=0.5.3"></script>'
+
+          if marker not in text:
+              text = text.replace('</body>', f'  {marker}\n</body>')
+              path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit published web update
+        run: |
+          if git diff --quiet; then
+            echo "Web enhancement already connected."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Enable Dia atípico in web app v0.5.3"
+          git push
