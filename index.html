@@ -613,6 +613,7 @@
     const LEGACY_ATYPICAL_WEEKS_KEY="confesso-que-bebi-atypical-weeks-v1";
     const STANDARD_GRAMS=10;
     const ALCOHOL_DENSITY=0.789;
+    const HISTORY_START=startOfWeek(new Date(2026,6,27));
 
     const DRINKS=[
       {id:"cerveja",name:"Cerveja",emoji:"🍺",volume:350,abv:5},
@@ -1033,7 +1034,8 @@
     function groupCalendarWeeks(){
       if(!entries.length)return[];
       const firstEntry=entries.reduce((oldest,item)=>item.datetime<oldest.datetime?item:oldest,entries[0]);
-      const first=startOfWeek(firstEntry.datetime);
+      const firstEntryWeek=startOfWeek(firstEntry.datetime);
+      const first=firstEntryWeek<HISTORY_START?new Date(HISTORY_START):firstEntryWeek;
       const current=startOfWeek(new Date());
       const lastEntryWeek=startOfWeek(entries[0].datetime);
       const end=lastEntryWeek>current?lastEntryWeek:current;
@@ -1064,15 +1066,16 @@
     }
 
     function moveWeek(offset){
-      const next=addDays(selectedWeekStart,offset*7);
+      const next=startOfWeek(addDays(selectedWeekStart,offset*7));
       const current=startOfWeek(new Date());
-      if(next>current)return;
-      selectedWeekStart=startOfWeek(next);
+      if(next>current||next<HISTORY_START)return;
+      selectedWeekStart=next;
       renderDashboard();
     }
 
     function openWeek(start){
-      selectedWeekStart=startOfWeek(start);
+      const target=startOfWeek(start);
+      selectedWeekStart=target<HISTORY_START?new Date(HISTORY_START):target;
       switchView("dashboard");
       renderDashboard();
     }
@@ -1273,6 +1276,7 @@
       el.selectedWeekLabel.textContent=current?"Semana atual":"Semana selecionada";
       el.selectedWeekDates.textContent=formatWeekRange(start);
       el.nextWeek.disabled=current;
+      el.previousWeek.disabled=weekKey(selectedWeekStart)===weekKey(HISTORY_START);
       el.atypicalWeek.checked=selectedAtypical;
       el.atypicalControl.classList.toggle("active",selectedAtypical);
       el.currentWeekDoses.textContent=formatNumber(doses,2);
