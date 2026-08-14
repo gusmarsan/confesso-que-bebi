@@ -19,28 +19,43 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Connect enhancements to web app
+      - name: Fix web authentication flow
         run: |
           python - <<'PY'
           from pathlib import Path
 
           path = Path('index.html')
           text = path.read_text(encoding='utf-8')
-          marker = '<script type="module" src="./app-enhancements.js?v=0.5.3"></script>'
 
-          if marker not in text:
-              text = text.replace('</body>', f'  {marker}\n</body>')
-              path.write_text(text, encoding='utf-8')
+          # The index no longer owns an interactive login screen. Keep it invisible
+          # while Firebase restores the persisted session; unauthenticated users go
+          # to acesso.html, which is the single email+password entry point.
+          old_section = '<section id="authScreen" class="auth-screen" aria-label="Acesso à conta">'
+          new_section = '<section id="authScreen" class="auth-screen" aria-label="Acesso à conta" style="display:none">'
+          if old_section in text:
+              text = text.replace(old_section, new_section, 1)
+
+          old_auth = '''    onAuthStateChanged(auth,user=>{\n      if(user)startUserSession(user);\n      else endUserSession();\n    });'''
+          new_auth = '''    onAuthStateChanged(auth,user=>{\n      if(user){\n        startUserSession(user);\n        return;\n      }\n      location.replace("./acesso.html");\n    });'''
+          if old_auth not in text:
+              raise SystemExit('Expected auth state block not found in index.html')
+          text = text.replace(old_auth, new_auth, 1)
+
+          marker_old = '<script type="module" src="./app-enhancements.js?v=0.5.3"></script>'
+          marker_new = '<script type="module" src="./app-enhancements.js?v=0.5.4"></script>'
+          text = text.replace(marker_old, marker_new)
+
+          path.write_text(text, encoding='utf-8')
           PY
 
       - name: Commit published web update
         run: |
           if git diff --quiet; then
-            echo "Web enhancement already connected."
+            echo "Web authentication flow already updated."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          git commit -m "Enable Dia atípico in web app v0.5.3"
+          git commit -m "Fix persistent web login flow v0.5.4"
           git push
