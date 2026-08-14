@@ -1,0 +1,38 @@
+name: Auth hotfix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/auth-hotfix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch index
+        run: python scripts/auth_hotfix.py
+
+      - name: Verify patch
+        run: |
+          grep -q 'signInWithEmailAndPassword' index.html
+          grep -q 'id="accessPassword"' index.html
+          grep -q 'onAuthStateChanged(auth,user=>' index.html
+
+      - name: Commit repaired index
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Repair auth flow v0.5.3.1"
+          git push
