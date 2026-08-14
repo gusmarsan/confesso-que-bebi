@@ -437,7 +437,7 @@
         </div>
       </div>
       <div class="account-tools">
-        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.6.13</span>
+        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.6.14</span>
         <div id="syncStatus" class="saved-pill syncing">Conectando</div>
         <button id="logoutButton" class="logout-button" type="button">Sair</button>
       </div>
@@ -1086,7 +1086,7 @@
 
     function averageEligibleWeeks(groups=groupCalendarWeeks()){
       const now=new Date();
-      return groups.filter(week=>!week.atypical&&week.end<now);
+      return groups.filter(week=>week.end<now);
     }
 
     function weeklyAverage(groups=groupCalendarWeeks()){
@@ -1769,6 +1769,6 @@
     renderAll();
   </script>
   <script type="module" src="./app-enhancements.js?v=0.6"></script>
-  <script type="module" src="./app-dashboard-v06.js?v=0.6.13"></script>
+  <script type="module" src="./app-dashboard-v06.js?v=0.6.14"></script>
 </body>
 </html>

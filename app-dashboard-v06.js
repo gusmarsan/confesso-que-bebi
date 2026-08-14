@@ -126,9 +126,7 @@
       const weekEntries = entriesForWeek(start);
       const actualDoses = weekEntries.reduce((sum, item) => sum + Number(item.doses || 0), 0);
       const actualGrams = weekEntries.reduce((sum, item) => sum + Number(item.grams || 0), 0);
-      const adjustedDoses = weekEntries
-        .filter(item => !atypicalDays.has(String(item.datetime).slice(0, 10)))
-        .reduce((sum, item) => sum + Number(item.doses || 0), 0);
+      const adjustedDoses = actualDoses;
       const hidden = key !== weekKey(current) && hiddenWeeks.has(key) && weekEntries.length === 0;
 
       groups.push({
@@ -167,6 +165,9 @@
         cursor:pointer;
       }
       #dayGrid .day{cursor:pointer}
+      .cqb-day-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+      .cqb-day-actions .atypical-control{justify-content:flex-start;margin:0;padding:0}
+      .cqb-day-actions .link-button{padding:0}
       .cqb-hero-metrics{
         display:grid;grid-template-columns:72px 82px 104px 104px;
         align-items:start;gap:14px;flex:1;min-width:0;
@@ -186,6 +187,23 @@
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function installAtypicalControlPosition() {
+    const today = $("#todayLink");
+    const control = $("#atypicalControl");
+    const head = today?.closest(".section-head");
+    if (!today || !control || !head) return;
+
+    let actions = head.querySelector(".cqb-day-actions");
+    if (!actions) {
+      actions = document.createElement("div");
+      actions.className = "cqb-day-actions";
+      head.appendChild(actions);
+    }
+
+    if (today.parentElement !== actions) actions.appendChild(today);
+    if (control.parentElement !== actions) actions.appendChild(control);
   }
 
   function installHeroMetrics() {
@@ -322,7 +340,7 @@
     const now = new Date();
     const averageGroups = visibleGroups.filter(week => addDays(week.start, 7) <= now);
     const average = averageGroups.length
-      ? averageGroups.reduce((sum, week) => sum + week.adjustedDoses, 0) / averageGroups.length
+      ? averageGroups.reduce((sum, week) => sum + week.actualDoses, 0) / averageGroups.length
       : 0;
     const markedCount = averageGroups.reduce((sum, week) => sum + week.markedDays.length, 0);
     const hiddenCount = allGroups.filter(week => week.hidden).length;
@@ -339,11 +357,7 @@
     if (weeksCount && weeksCount.textContent !== weeksCountText) weeksCount.textContent = weeksCountText;
 
     const mainNoteParts = [];
-    if (markedCount) {
-      mainNoteParts.push(`${markedCount} ${markedCount === 1 ? "dia atípico desconsiderado" : "dias atípicos desconsiderados"}`);
-    }
-
-    const historyNoteParts = [...mainNoteParts];
+    const historyNoteParts = [];
 
     const note = $("#averageExclusionNote");
     const noteText = mainNoteParts.join(" · ");
@@ -507,6 +521,7 @@
 
   function refresh() {
     injectStyles();
+    installAtypicalControlPosition();
     installWeekNavigationGuard();
     if (ensureSelectedWeekVisible()) return;
     installHeroMetrics();
@@ -561,6 +576,7 @@
 
   async function init() {
     injectStyles();
+    installAtypicalControlPosition();
     installWeekNavigationGuard();
     installHeroMetrics();
     installDaySelection();
