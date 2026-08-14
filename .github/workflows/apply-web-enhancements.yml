@@ -1,4 +1,4 @@
-name: Restore stable web app
+name: Repair web authentication
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  restore:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,17 +19,161 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore stable index
+      - name: Repair authentication in index
         run: |
-          git checkout 9a2b654a0cff947ea89fc232096d162475bbace1 -- index.html
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Commit rollback
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          # Replace the old magic-link Firebase Auth imports with password auth.
+          old_import = '''      initializeAuth,indexedDBLocalPersistence,browserLocalPersistence,onAuthStateChanged,\n      sendSignInLinkToEmail,isSignInWithEmailLink,signInWithEmailLink,signOut'''
+          new_import = '''      initializeAuth,indexedDBLocalPersistence,browserLocalPersistence,onAuthStateChanged,\n      signInWithEmailAndPassword,sendPasswordResetEmail,signOut'''
+          if old_import not in text:
+              raise SystemExit('Old Firebase auth import block not found')
+          text = text.replace(old_import, new_import, 1)
+
+          # Replace the visible auth card with the password flow already used by acesso.html.
+          auth_start = text.index('    <form id="emailAccessForm" class="auth-card">')
+          auth_end = text.index('    </form>', auth_start) + len('    </form>')
+          new_card = '''    <form id="emailAccessForm" class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-mark">🍹</div>
+        <div><h1>Confesso que bebi</h1><p>Seus registros sincronizados em todos os aparelhos</p></div>
+      </div>
+
+      <h2>Entrar</h2>
+      <p class="auth-intro">Use seu e-mail e senha. Depois do primeiro acesso, a sessão fica salva neste navegador.</p>
+
+      <div class="auth-field">
+        <label for="accessEmail">E-mail</label>
+        <input id="accessEmail" type="email" autocomplete="email" inputmode="email" required>
+      </div>
+
+      <div class="auth-field">
+        <label for="accessPassword">Senha</label>
+        <input id="accessPassword" type="password" autocomplete="current-password" minlength="6" required>
+      </div>
+
+      <button id="emailLoginButton" class="create-user-button" type="submit">
+        <span class="google-icon">↗</span>
+        <span class="button-label">Entrar</span>
+      </button>
+
+      <button id="createUserButton" class="google-button" type="button" style="margin-top:10px">
+        <span class="google-icon">✉</span>
+        <span class="button-label">Definir ou redefinir senha</span>
+      </button>
+
+      <p id="authMessage" class="auth-message" role="status"></p>
+      <p class="auth-note">Depois de entrar, você continua conectado neste aparelho até clicar em Sair.</p>
+    </form>'''
+          text = text[:auth_start] + new_card + text[auth_end:]
+
+          # Add the password input to the element registry.
+          old_registry = '      accessEmail:$("#accessEmail"),\n      createUserButton:$("#createUserButton"),'
+          new_registry = '      accessEmail:$("#accessEmail"),\n      accessPassword:$("#accessPassword"),\n      createUserButton:$("#createUserButton"),'
+          if old_registry not in text:
+              raise SystemExit('Auth element registry not found')
+          text = text.replace(old_registry, new_registry, 1)
+
+          # Replace the entire old email-link block with password sign-in/reset.
+          block_start = text.index('    const EMAIL_STORAGE_KEY="confesso-que-bebi-email-link-address";')
+          block_end = text.index('    el.logoutButton.addEventListener', block_start)
+          new_logic = '''    const EMAIL_STORAGE_KEY="confesso-que-bebi-email-link-address";
+
+    function setEmailButtonsBusy(activeButton,busy){
+      [el.createUserButton,el.emailLoginButton].forEach(button=>button.disabled=busy);
+      el.accessEmail.disabled=busy;
+      el.accessPassword.disabled=busy;
+      if(activeButton){
+        const label=activeButton.querySelector(".button-label");
+        if(label){
+          if(!label.dataset.original)label.dataset.original=label.textContent;
+          label.textContent=busy?"Aguarde...":label.dataset.original;
+        }
+      }
+    }
+
+    function passwordAuthMessage(error){
+      const code=String(error?.code||"erro-sem-codigo");
+      const messages={
+        "auth/invalid-credential":"E-mail ou senha incorretos.",
+        "auth/wrong-password":"Senha incorreta.",
+        "auth/user-not-found":"Não encontrei uma conta com este e-mail.",
+        "auth/invalid-email":"Confira o endereço de e-mail.",
+        "auth/too-many-requests":"Muitas tentativas seguidas. Tente novamente depois.",
+        "auth/network-request-failed":"Não foi possível acessar a internet.",
+        "auth/operation-not-allowed":"O acesso por e-mail e senha não está habilitado no Firebase."
+      };
+      return messages[code]||`Não foi possível concluir o acesso. Código: ${code}`;
+    }
+
+    el.emailAccessForm.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const email=el.accessEmail.value.trim().toLowerCase();
+      const password=el.accessPassword.value;
+      if(!email||password.length<6){
+        el.authMessage.textContent="Digite o e-mail e uma senha com pelo menos 6 caracteres.";
+        return;
+      }
+      setEmailButtonsBusy(el.emailLoginButton,true);
+      el.authMessage.textContent="Entrando...";
+      try{
+        localStorage.setItem(EMAIL_STORAGE_KEY,email);
+        await signInWithEmailAndPassword(auth,email,password);
+        el.authMessage.textContent="";
+      }catch(error){
+        console.error(error);
+        el.authMessage.textContent=passwordAuthMessage(error);
+      }finally{
+        setEmailButtonsBusy(el.emailLoginButton,false);
+      }
+    });
+
+    el.createUserButton.addEventListener("click",async()=>{
+      const email=el.accessEmail.value.trim().toLowerCase();
+      if(!email){
+        el.authMessage.textContent="Digite primeiro o e-mail da sua conta.";
+        el.accessEmail.focus();
+        return;
+      }
+      setEmailButtonsBusy(el.createUserButton,true);
+      el.authMessage.textContent="Enviando e-mail para definir ou redefinir a senha...";
+      try{
+        localStorage.setItem(EMAIL_STORAGE_KEY,email);
+        await sendPasswordResetEmail(auth,email,{url:"https://gusmarsan.github.io/confesso-que-bebi/"});
+        el.authMessage.textContent="E-mail enviado. Defina a senha e depois volte para entrar.";
+      }catch(error){
+        console.error(error);
+        el.authMessage.textContent=passwordAuthMessage(error);
+      }finally{
+        setEmailButtonsBusy(el.createUserButton,false);
+      }
+    });
+
+'''
+          text = text[:block_start] + new_logic + text[block_end:]
+
+          # Remove the obsolete email-link completion call but keep the saved e-mail preload.
+          text = text.replace('    finishEmailLinkAccess();\n', '')
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Sanity check
         run: |
-          if git diff --cached --quiet; then
-            echo "Stable index already restored."
-            exit 0
-          fi
+          grep -q 'signInWithEmailAndPassword' index.html
+          grep -q 'id="accessPassword"' index.html
+          grep -q 'onAuthStateChanged(auth,user=>' index.html
+          ! grep -q 'sendSignInLinkToEmail' index.html
+
+      - name: Commit repair
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Rollback broken web auth change"
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Repair web auth and Android blank-screen loop v0.5.3.1"
           git push
