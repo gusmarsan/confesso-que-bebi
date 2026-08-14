@@ -170,6 +170,7 @@
       }
       .cqb-hero-metrics>div{min-width:0}
       .cqb-hero-metrics span{display:inline-block;line-height:1.18}
+      .week-card.cqb-hidden-week{display:none!important}
       .cqb-delete-week{
         align-self:flex-start;margin-top:9px;padding:3px 0;border:0;background:none;
         color:#a69bab;font:inherit;font-size:.56rem;font-weight:800;text-decoration:underline;
@@ -392,6 +393,12 @@
 
       card.dataset.cqbWeekKey = week.key;
       card.hidden = week.hidden;
+      card.classList.toggle("cqb-hidden-week", week.hidden);
+      if (week.hidden) {
+        card.style.setProperty("display", "none", "important");
+      } else {
+        card.style.removeProperty("display");
+      }
       card.setAttribute("aria-hidden", week.hidden ? "true" : "false");
       const existingDeleteButton = card.querySelector(".cqb-delete-week");
 
