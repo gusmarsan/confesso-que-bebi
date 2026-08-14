@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/history-start-v068.yml'
+      - '.github/scripts/history-start-v068.py'
   workflow_dispatch:
 
 permissions:
