@@ -8,10 +8,12 @@ on:
       - "android-app/**"
       - ".github/workflows/build-android-apk.yml"
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,25 +35,21 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Prepare valid launcher icon
+      - name: Validate launcher icon
         run: |
-          ICON_B64='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'
-          mkdir -p /tmp/confesso-icon
-          printf '%s' "$ICON_B64" | base64 -d > /tmp/confesso-icon/ic_launcher.jpg
-          for folder in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi mipmap-xxxhdpi; do
-            mkdir -p "android-app/app/src/main/res/$folder"
-            cp /tmp/confesso-icon/ic_launcher.jpg "android-app/app/src/main/res/$folder/ic_launcher.jpg"
-          done
+          test -f android-app/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          file android-app/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
 
       - name: Build debug APK
-        run: gradle -p android-app :app:assembleDebug --stacktrace
+        working-directory: android-app
+        run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.5-debug.apk
+        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.7.1-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Confesso-que-bebi-Android-v0.5
-          path: Confesso-que-bebi-v0.5-debug.apk
+          name: Confesso-que-bebi-Android-v0.7.1
+          path: Confesso-que-bebi-v0.7.1-debug.apk
           if-no-files-found: error
