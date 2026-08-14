@@ -129,7 +129,7 @@
       const adjustedDoses = weekEntries
         .filter(item => !atypicalDays.has(String(item.datetime).slice(0, 10)))
         .reduce((sum, item) => sum + Number(item.doses || 0), 0);
-      const hidden = hiddenWeeks.has(key) && weekEntries.length === 0;
+      const hidden = key !== weekKey(current) && hiddenWeeks.has(key) && weekEntries.length === 0;
 
       groups.push({
         key,
@@ -398,7 +398,7 @@
       if (!week) return;
 
       card.dataset.cqbWeekKey = week.key;
-      const hideFromHistory = week.hidden || week.key === currentKey;
+      const hideFromHistory = week.hidden && week.key !== currentKey;
       card.hidden = hideFromHistory;
       card.classList.toggle("cqb-hidden-week", hideFromHistory);
       if (hideFromHistory) {
@@ -413,18 +413,22 @@
 
       const title = card.querySelector(".week-top b");
       if (title) {
-        const recentIndex = visibleDescending.findIndex(item => item.key === week.key);
-        if (recentIndex === 0) {
-          title.textContent = "Fim de semana passado";
-        } else if (recentIndex === 1) {
-          title.textContent = "Fim de semana retrasado";
+        if (week.key === currentKey) {
+          title.textContent = "Semana atual";
         } else {
-          const chronologicalIndex = visibleAscending.findIndex(item => item.key === week.key);
-          title.textContent = `Semana ${chronologicalIndex + 1}`;
+          const recentIndex = visibleDescending.findIndex(item => item.key === week.key);
+          if (recentIndex === 0) {
+            title.textContent = "Fim de semana passado";
+          } else if (recentIndex === 1) {
+            title.textContent = "Fim de semana retrasado";
+          } else {
+            const chronologicalIndex = visibleAscending.findIndex(item => item.key === week.key);
+            title.textContent = `Semana ${chronologicalIndex + 1}`;
+          }
         }
       }
 
-      if (week.entries.length === 0) {
+      if (week.entries.length === 0 && week.key !== currentKey) {
         if (!existingDeleteButton) {
           const button = document.createElement("button");
           button.type = "button";
@@ -474,7 +478,7 @@
 
   function ensureSelectedWeekVisible() {
     const selectedKey = weekKey(selectedWeekStart());
-    if (!hiddenWeeks.has(selectedKey)) return false;
+    if (selectedKey === weekKey(new Date()) || !hiddenWeeks.has(selectedKey)) return false;
     if (skippingHiddenWeek) return true;
 
     let direction = hiddenWeekNavigationDirection || -1;
@@ -560,6 +564,12 @@
     installWeekNavigationGuard();
     installHeroMetrics();
     installDaySelection();
+
+    window.addEventListener("cqb:today", () => {
+      selectedDayKey = dateKey(new Date());
+      selectedDayIsExplicit = false;
+      scheduleRefresh();
+    });
 
     const appModule = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`);
     const authModule = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`);

@@ -437,8 +437,8 @@
         </div>
       </div>
       <div class="account-tools">
+        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.6.13</span>
         <div id="syncStatus" class="saved-pill syncing">Conectando</div>
-        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.6.12</span>
         <button id="logoutButton" class="logout-button" type="button">Sair</button>
       </div>
     </header>
@@ -477,6 +477,7 @@
 
         <div class="section-head">
           <div><h2>De segunda a domingo</h2><p>Como as doses se distribuíram na semana</p></div>
+          <a id="todayLink" class="link-button" href="#dashboard">Hoje</a>
         </div>
         <div id="dayGrid" class="day-grid"></div>
 
@@ -1662,6 +1663,12 @@
     $("#weekReport").onclick=buildWeeklyReport;
     el.previousWeek.onclick=()=>moveWeek(-1);
     el.nextWeek.onclick=()=>moveWeek(1);
+    $("#todayLink").onclick=event=>{
+      event.preventDefault();
+      selectedWeekStart=startOfWeek(new Date());
+      renderDashboard();
+      window.dispatchEvent(new CustomEvent("cqb:today"));
+    };
     el.atypicalWeek.onchange=event=>setSelectedWeekAtypical(event.target.checked);
     el.recentEntries.addEventListener("click",event=>{
       const editButton=event.target.closest("[data-edit-id]");
@@ -1762,6 +1769,6 @@
     renderAll();
   </script>
   <script type="module" src="./app-enhancements.js?v=0.6"></script>
-  <script type="module" src="./app-dashboard-v06.js?v=0.6.11"></script>
+  <script type="module" src="./app-dashboard-v06.js?v=0.6.13"></script>
 </body>
 </html>
