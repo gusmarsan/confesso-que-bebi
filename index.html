@@ -61,6 +61,7 @@
       background:#48d7bd12;color:#168d78;font-size:.63rem;font-weight:800;
       white-space:nowrap;
     }
+    .version-pill{color:var(--muted);font-size:.58rem;font-weight:850;white-space:nowrap}
     .saved-pill.syncing{border-color:#ffd16666;background:#ffd16620;color:#8a6516}
     .saved-pill.offline{border-color:#ff8f7066;background:#ff8f7017;color:#b24a38}
     .account-tools{display:flex;align-items:center;gap:6px}
@@ -377,6 +378,7 @@
       .brand{gap:8px}.brand-mark{width:40px;height:40px}
       .brand p{display:none}
       .saved-pill{padding:6px 8px;font-size:.56rem}
+      .version-pill{font-size:.52rem}
       .logout-button{padding:0 7px;font-size:.56rem}
       .stats{gap:6px}.stat{padding:12px 9px}.stat b{font-size:.9rem}
       .drink-grid{grid-template-columns:repeat(4,1fr);gap:6px}
@@ -436,6 +438,7 @@
       </div>
       <div class="account-tools">
         <div id="syncStatus" class="saved-pill syncing">Conectando</div>
+        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.6.10</span>
         <button id="logoutButton" class="logout-button" type="button">Sair</button>
       </div>
     </header>
@@ -550,11 +553,11 @@
       <section id="history" class="view">
         <div class="page-title">
           <p>Semana após semana</p>
-          <h2>Seu histórico</h2>
+          <h2>Histórico</h2>
         </div>
 
         <div class="history-hero">
-          <span>Média das semanas desde o primeiro registro</span>
+          <span>Média semanal</span>
           <strong id="historyAverage">0 doses</strong>
           <small id="historyAverageDetail">Nenhuma semana registrada</small>
         </div>
@@ -1383,7 +1386,7 @@
       const average=weeklyAverage(groups);
       el.historyAverage.textContent=`${formatNumber(average,2)} doses`;
       el.historyAverageDetail.textContent=groups.length
-        ?`${eligible.length} ${eligible.length===1?"semana considerada":"semanas consideradas"} na média${excluded?` · ${excluded} ${excluded===1?"atípica excluída":"atípicas excluídas"}`:""}`
+        ?`${eligible.length} ${eligible.length===1?"semana considerada":"semanas consideradas"} na média`
         :"Nenhuma semana registrada";
       el.weekList.innerHTML="";
 
@@ -1758,6 +1761,6 @@
     renderAll();
   </script>
   <script type="module" src="./app-enhancements.js?v=0.6"></script>
-  <script type="module" src="./app-dashboard-v06.js?v=0.6.9"></script>
+  <script type="module" src="./app-dashboard-v06.js?v=0.6.10"></script>
 </body>
 </html>

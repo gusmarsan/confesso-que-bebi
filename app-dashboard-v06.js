@@ -347,9 +347,6 @@
     }
 
     const historyNoteParts = [...mainNoteParts];
-    if (hiddenCount) {
-      historyNoteParts.push(`${hiddenCount} ${hiddenCount === 1 ? "semana vazia excluída" : "semanas vazias excluídas"}`);
-    }
 
     const note = $("#averageExclusionNote");
     const noteText = mainNoteParts.join(" · ");
@@ -395,30 +392,35 @@
     if (!cards.length || !allGroups.length) return;
 
     const descending = [...allGroups].reverse();
-    const visibleAscending = allGroups.filter(week => !week.hidden);
     const currentKey = weekKey(new Date());
+    const visibleAscending = allGroups.filter(week => !week.hidden && week.key !== currentKey);
+    const visibleDescending = [...visibleAscending].reverse();
 
     cards.forEach((card, index) => {
       const week = descending[index];
       if (!week) return;
 
       card.dataset.cqbWeekKey = week.key;
-      card.hidden = week.hidden;
-      card.classList.toggle("cqb-hidden-week", week.hidden);
-      if (week.hidden) {
+      const hideFromHistory = week.hidden || week.key === currentKey;
+      card.hidden = hideFromHistory;
+      card.classList.toggle("cqb-hidden-week", hideFromHistory);
+      if (hideFromHistory) {
         card.style.setProperty("display", "none", "important");
       } else {
         card.style.removeProperty("display");
       }
-      card.setAttribute("aria-hidden", week.hidden ? "true" : "false");
+      card.setAttribute("aria-hidden", hideFromHistory ? "true" : "false");
       const existingDeleteButton = card.querySelector(".cqb-delete-week");
 
-      if (week.hidden) return;
+      if (hideFromHistory) return;
 
       const title = card.querySelector(".week-top b");
       if (title) {
-        if (week.key === currentKey) {
-          title.textContent = "Semana atual";
+        const recentIndex = visibleDescending.findIndex(item => item.key === week.key);
+        if (recentIndex === 0) {
+          title.textContent = "Fim de semana passado";
+        } else if (recentIndex === 1) {
+          title.textContent = "Fim de semana retrasado";
         } else {
           const chronologicalIndex = visibleAscending.findIndex(item => item.key === week.key);
           title.textContent = `Semana ${chronologicalIndex + 1}`;
