@@ -1,0 +1,74 @@
+name: Fix day actions v0.6.15
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-day-actions-v0615.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply v0.6.15
+        run: python .github/scripts/fix-day-actions-v0615.py
+
+      - name: Validate structure
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path('index.html').read_text(encoding='utf-8')
+          assert html.count('id="atypicalControl"') == 1
+          assert html.count('id="todayLink"') == 1
+          actions = html[html.index('<div class="cqb-day-actions">'):html.index('</div>', html.index('<div class="cqb-day-actions">')) + 6]
+          assert actions.index('id="todayLink"') < actions.index('id="atypicalControl"')
+          assert '<span>Dia atípico</span>' in actions
+          assert '>v0.6.15</span>' in html
+          assert 'app-dashboard-v06.js?v=0.6.15' in html
+          assert Path('version.txt').read_text().strip() == '0.6.15'
+          PY
+
+      - name: Validate JavaScript
+        run: |
+          node --check app-dashboard-v06.js
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('index.html').read_text(encoding='utf-8')
+          start = text.index('<script type="module">') + len('<script type="module">')
+          end = text.index('</script>', start)
+          Path('/tmp/main.js').write_text(text[start:end], encoding='utf-8')
+          PY
+          node --check /tmp/main.js
+
+      - name: Commit v0.6.15
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html sw.js version.txt
+          git diff --cached --quiet || git commit -m 'Fix Hoje and Dia atipico alignment v0.6.15'
+          git push
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
