@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#ff5f7a">
+  <title>Redefinir senha · Confesso que bebi</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#fffaf5;color:#2d2540;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(100%,420px);padding:24px;border:1px solid #eee5ed;border-radius:26px;background:#fff;box-shadow:0 18px 45px rgba(79,49,93,.12)}
+    .brand{text-align:center}
+    img{width:78px;height:78px;border-radius:20px;box-shadow:0 12px 28px rgba(45,37,64,.14)}
+    h1{margin:16px 0 7px;font-size:1.38rem;letter-spacing:-.04em}
+    p{margin:0 0 20px;color:#776f88;font-size:.8rem;line-height:1.5}
+    label{display:block;margin:0 0 7px;color:#776f88;font-size:.69rem;font-weight:800}
+    input{width:100%;height:50px;margin:0 0 13px;padding:0 14px;border:1px solid #eee5ed;border-radius:14px;background:#fffafc;color:#2d2540;font:inherit;outline:none}
+    input:focus{border-color:#ff5f7a88;box-shadow:0 0 0 4px #ff5f7a12}
+    button{width:100%;min-height:50px;border:0;border-radius:14px;background:linear-gradient(135deg,#ff5f7a,#df3f61);color:#fff;font:inherit;font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(223,63,97,.22)}
+    button:disabled{opacity:.58;cursor:wait}
+    #status{display:block;min-height:42px;margin-top:14px;color:#776f88;font-size:.69rem;line-height:1.45;text-align:center}
+    #status.error{color:#b23f57} #status.success{color:#168d78}
+    a{display:block;margin-top:13px;text-align:center;color:#776f88;font-size:.68rem;font-weight:750;text-underline-offset:3px}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">
+      <img src="./icon-512.png" alt="Ícone do Confesso que bebi">
+      <h1>Redefinir senha</h1>
+      <p>Digite o e-mail da sua conta. Você receberá uma mensagem para criar uma nova senha.</p>
+    </div>
+
+    <form id="resetForm">
+      <label for="email">E-mail</label>
+      <input id="email" type="email" autocomplete="email" inputmode="email" required>
+      <button id="sendButton" type="submit">Enviar link</button>
+    </form>
+
+    <span id="status" aria-live="polite"></span>
+    <a href="./index.html">Voltar para entrar</a>
+  </main>
+
+  <script type="module">
+    import {initializeApp} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js";
+    import {getAuth,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+
+    const app=initializeApp({
+      apiKey:"AIzaSyCntynX17PUan8o1EAW0-QFOOCNeQnMY5g",
+      authDomain:"confesso-que-bebi.firebaseapp.com",
+      projectId:"confesso-que-bebi",
+      storageBucket:"confesso-que-bebi.firebasestorage.app",
+      messagingSenderId:"324283589525",
+      appId:"1:324283589525:web:78a0bcc2f7b736a6f78c9c"
+    });
+    const auth=getAuth(app);
+    auth.languageCode="pt-BR";
+
+    const form=document.getElementById("resetForm");
+    const email=document.getElementById("email");
+    const sendButton=document.getElementById("sendButton");
+    const status=document.getElementById("status");
+    email.value=localStorage.getItem("confesso-que-bebi-email-link-address")||"";
+
+    function show(message,type=""){
+      status.className=type;
+      status.textContent=message;
+    }
+
+    form.addEventListener("submit",async event=>{
+      event.preventDefault();
+      const address=email.value.trim().toLowerCase();
+      if(!address){
+        show("Digite o e-mail da sua conta.","error");
+        return;
+      }
+      sendButton.disabled=true;
+      email.disabled=true;
+      show("Enviando…");
+      try{
+        localStorage.setItem("confesso-que-bebi-email-link-address",address);
+        await sendPasswordResetEmail(auth,address,{url:"https://gusmarsan.github.io/confesso-que-bebi/index.html"});
+        show("E-mail enviado. Abra a mensagem e defina uma nova senha.","success");
+      }catch(error){
+        console.error(error);
+        const code=String(error?.code||"");
+        const messages={
+          "auth/invalid-email":"Confira o endereço de e-mail.",
+          "auth/network-request-failed":"Não foi possível acessar a internet.",
+          "auth/too-many-requests":"Muitas tentativas seguidas. Tente novamente depois."
+        };
+        show(messages[code]||`Não foi possível enviar o e-mail. Código: ${code||"erro-sem-codigo"}`,"error");
+      }finally{
+        sendButton.disabled=false;
+        email.disabled=false;
+      }
+    });
+  </script>
+</body>
+</html>
