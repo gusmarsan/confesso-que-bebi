@@ -56,7 +56,7 @@ public class MainActivity extends Activity {
         settings.setDisplayZoomControls(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.7.1");
+        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.7.2");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -82,7 +82,7 @@ public class MainActivity extends Activity {
                 CookieManager.getInstance().flush();
                 if (isAppPage(url)) {
                     installEnhancements(view);
-                    view.evaluateJavascript("(function(){var v=document.getElementById('appVersion');if(v)v.textContent='v0.7.1';})()", null);
+                    view.evaluateJavascript("(function(){var v=document.getElementById('appVersion');if(v)v.textContent='v0.7.2';})()", null);
                     revealWhenAuthIsReady(view);
                 } else {
                     view.setVisibility(View.VISIBLE);
