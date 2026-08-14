@@ -38,7 +38,7 @@ index = replace_once(
 
 index = replace_once(
     index,
-    'src="./app-dashboard-v06.js?v=0.6.12"',
+    'src="./app-dashboard-v06.js?v=0.6.11"',
     'src="./app-dashboard-v06.js?v=0.6.13"',
     "dashboard cache bust",
 )
