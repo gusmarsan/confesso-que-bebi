@@ -1,0 +1,77 @@
+name: History labels and version v0.6.10
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/history-labels-version-v0610.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply v0.6.10
+        run: python .github/scripts/history-labels-version-v0610.py
+
+      - name: Validate JavaScript
+        run: |
+          node --check app-dashboard-v06.js
+          python - <<'PY'
+          from pathlib import Path
+          text = Path('index.html').read_text(encoding='utf-8')
+          start = text.index('<script type="module">') + len('<script type="module">')
+          end = text.index('</script>', start)
+          Path('/tmp/main.js').write_text(text[start:end], encoding='utf-8')
+          PY
+          node --check /tmp/main.js
+
+      - name: Validate v0.6.10 behavior
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          index = Path('index.html').read_text(encoding='utf-8')
+          dash = Path('app-dashboard-v06.js').read_text(encoding='utf-8')
+          assert '<h2>Histórico</h2>' in index
+          assert '<span>Média semanal</span>' in index
+          assert 'id="appVersion"' in index and '>v0.6.10</span>' in index
+          assert 'app-dashboard-v06.js?v=0.6.10' in index
+          assert 'Fim de semana passado' in dash
+          assert 'Fim de semana retrasado' in dash
+          assert 'hideFromHistory = week.hidden || week.key === currentKey' in dash
+          assert 'semana vazia excluída' not in dash[dash.index('function updateAveragesAndCounts'):dash.index('async function hideEmptyWeek')]
+          assert Path('version.txt').read_text().strip() == '0.6.10'
+          assert 'confesso-que-bebi-pwa-v7' in Path('sw.js').read_text(encoding='utf-8')
+          PY
+
+      - name: Commit v0.6.10
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html app-dashboard-v06.js sw.js version.txt
+          git diff --cached --quiet || git commit -m 'Refine history labels and show version v0.6.10'
+          git push
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
