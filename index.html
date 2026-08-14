@@ -218,6 +218,9 @@
     .section-head h2{margin:0;font-size:1rem;letter-spacing:-.025em}
     .section-head p{margin:4px 0 0;color:var(--muted);font-size:.67rem}
     .link-button{border:0;background:none;color:var(--pink-dark);font-size:.69rem;font-weight:850}
+    .cqb-day-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:nowrap;white-space:nowrap}
+    .cqb-day-actions .atypical-control{display:flex;align-items:center;justify-content:flex-start;gap:6px;margin:0;padding:0}
+    .cqb-day-actions .link-button{padding:0}
     .day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
     .day{
       --fill:0%;
@@ -437,7 +440,7 @@
         </div>
       </div>
       <div class="account-tools">
-        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.6.14</span>
+        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.6.15</span>
         <div id="syncStatus" class="saved-pill syncing">Conectando</div>
         <button id="logoutButton" class="logout-button" type="button">Sair</button>
       </div>
@@ -464,11 +467,6 @@
           <button id="nextWeek" type="button" aria-label="Próxima semana">›</button>
         </div>
 
-        <label id="atypicalControl" class="atypical-control">
-          <input id="atypicalWeek" type="checkbox">
-          <span>Semana atípica</span>
-        </label>
-
         <div class="stats">
           <article class="stat"><span>Registros na semana</span><b id="currentWeekEntries">0</b></article>
           <article class="stat"><span>Média semanal</span><b id="weeklyAverage">0 doses</b><small id="averageExclusionNote" class="average-note"></small></article>
@@ -477,7 +475,13 @@
 
         <div class="section-head">
           <div><h2>De segunda a domingo</h2><p>Como as doses se distribuíram na semana</p></div>
-          <a id="todayLink" class="link-button" href="#dashboard">Hoje</a>
+          <div class="cqb-day-actions">
+            <a id="todayLink" class="link-button" href="#dashboard">Hoje</a>
+            <label id="atypicalControl" class="atypical-control">
+              <input id="atypicalWeek" type="checkbox">
+              <span>Dia atípico</span>
+            </label>
+          </div>
         </div>
         <div id="dayGrid" class="day-grid"></div>
 
@@ -1769,6 +1773,6 @@
     renderAll();
   </script>
   <script type="module" src="./app-enhancements.js?v=0.6"></script>
-  <script type="module" src="./app-dashboard-v06.js?v=0.6.14"></script>
+  <script type="module" src="./app-dashboard-v06.js?v=0.6.15"></script>
 </body>
 </html>
