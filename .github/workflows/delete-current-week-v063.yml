@@ -1,0 +1,61 @@
+name: Delete empty current week v0.6.3
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/delete-current-week-v063.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: delete-current-week-v063
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply v0.6.3
+        run: python scripts/allow-delete-current-week-v063.py
+
+      - name: Validate JavaScript
+        run: node --check app-dashboard-v06.js
+
+      - name: Validate delete rule
+        run: |
+          grep -q 'if (week.entries.length === 0) {' app-dashboard-v06.js
+          ! grep -q 'week.entries.length === 0 && week.key !== currentKey' app-dashboard-v06.js
+          grep -q 'app-dashboard-v06.js?v=0.6.3' index.html
+          grep -q '^0.6.3$' version.txt
+
+      - name: Commit v0.6.3
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-dashboard-v06.js index.html version.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Allow deleting empty current week v0.6.3"
+            git push
+          fi
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
