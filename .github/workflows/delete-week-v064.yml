@@ -1,0 +1,66 @@
+name: Delete week v0.6.4
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/patch-v064.py"
+      - ".github/workflows/delete-week-v064.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: delete-week-v064
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply v0.6.4
+        run: |
+          python scripts/patch-v064.py
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8').replace('app-dashboard-v06.js?v=0.6.3','app-dashboard-v06.js?v=0.6.4').replace('app-dashboard-v06.js?v=0.6.2','app-dashboard-v06.js?v=0.6.4')
+          p.write_text(s,encoding='utf-8')
+          Path('version.txt').write_text('0.6.4\n',encoding='utf-8')
+          PY
+
+      - name: Validate JavaScript
+        run: node --check app-dashboard-v06.js
+
+      - name: Validate delete interaction
+        run: |
+          grep -q 'const existingDeleteButton = card.querySelector(".cqb-delete-week")' app-dashboard-v06.js
+          grep -q 'weeklyAverage && weeklyAverage.textContent !== averageText' app-dashboard-v06.js
+          if grep -q 'new MutationObserver(scheduleRefresh).observe(average' app-dashboard-v06.js; then exit 1; fi
+          grep -q 'app-dashboard-v06.js?v=0.6.4' index.html
+
+      - name: Commit v0.6.4
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app-dashboard-v06.js index.html version.txt
+          git diff --cached --quiet || git commit -m "Fix delete empty week click v0.6.4"
+          git push
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
