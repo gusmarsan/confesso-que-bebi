@@ -5,11 +5,17 @@
   const FIREBASE_VERSION = "12.16.0";
   const DAY_COLLECTION = "atypicalWeeks";
   const DAY_PREFIX = "day-";
+  const EXPECTED_DAY_DOSES = {
+    0: 13,
+    5: 12,
+    6: 25
+  };
 
   let auth;
   let db;
   let currentUser = null;
   let entries = [];
+  let entriesSnapshotReady = false;
   let atypicalDays = new Set();
   let stopEntries = null;
   let stopDays = null;
@@ -192,6 +198,36 @@
     window.__cqbEnhancementToastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
   }
 
+  function totalDosesForDay(items, key) {
+    return items
+      .filter(item => String(item.datetime || "").slice(0, 10) === key)
+      .reduce((sum, item) => sum + Number(item.doses || 0), 0);
+  }
+
+  function checkExpectedConsumptionThreshold(previousEntries, nextEntries, changedKeys) {
+    for (const key of changedKeys) {
+      if (!key) continue;
+      const day = parseDateKey(key);
+      const expected = EXPECTED_DAY_DOSES[day.getDay()];
+      if (!expected) continue;
+
+      const before = totalDosesForDay(previousEntries, key);
+      const after = totalDosesForDay(nextEntries, key);
+      const threshold = expected * 0.7;
+
+      if (before < threshold && after >= threshold) {
+        const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(day);
+        showToast(`Você chegou a 70% do consumo esperado para ${weekday}.`);
+        return;
+      }
+    }
+  }
+
+  function enforceVersionLabel() {
+    const version = $("#appVersion");
+    if (version && version.textContent !== "v0.7.3") version.textContent = "v0.7.3";
+  }
+
   function updateControl() {
     const button = $("#atypicalDayControl");
     if (!button) return;
@@ -316,6 +352,7 @@
   }
 
   function refresh() {
+    enforceVersionLabel();
     installControl();
     updateControl();
     updateSelectedWeekDays();
@@ -333,6 +370,7 @@
     stopEntries = null;
     stopDays = null;
     entries = [];
+    entriesSnapshotReady = false;
     atypicalDays = new Set();
   }
 
@@ -345,7 +383,24 @@
     );
 
     stopEntries = onSnapshot(collection(db, "users", user.uid, "drinkEntries"), snapshot => {
-      entries = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+      const previousEntries = entries;
+      const nextEntries = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+
+      if (entriesSnapshotReady) {
+        const changedKeys = new Set();
+        snapshot.docChanges().forEach(change => {
+          const nextKey = String(change.doc.data()?.datetime || "").slice(0, 10);
+          if (nextKey) changedKeys.add(nextKey);
+
+          const previousItem = previousEntries.find(item => item.id === change.doc.id);
+          const previousKey = String(previousItem?.datetime || "").slice(0, 10);
+          if (previousKey) changedKeys.add(previousKey);
+        });
+        checkExpectedConsumptionThreshold(previousEntries, nextEntries, changedKeys);
+      }
+
+      entries = nextEntries;
+      entriesSnapshotReady = true;
       scheduleRefresh();
     });
 
@@ -362,6 +417,9 @@
   async function init() {
     injectStyles();
     installControl();
+    enforceVersionLabel();
+    setTimeout(enforceVersionLabel, 300);
+    setTimeout(enforceVersionLabel, 1200);
 
     const appModule = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`);
     const authModule = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`);
