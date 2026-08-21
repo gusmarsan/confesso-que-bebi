@@ -1,4 +1,4 @@
-const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.2";
+const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,8 +6,8 @@ const APP_SHELL = [
   "./reset.html",
   "./install.html",
   "./manifest.webmanifest",
-  "./app-enhancements.js?v=0.7",
-  "./app-dashboard-v06.js?v=0.7",
+  "./app-enhancements.js?v=0.7.3",
+  "./app-dashboard-v06.js?v=0.7.2",
   "./icon-192.png",
   "./icon-512.png"
 ];
@@ -35,8 +35,15 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  let networkRequest = request;
+  if (url.pathname.endsWith("/app-enhancements.js")) {
+    const freshUrl = new URL(request.url);
+    freshUrl.searchParams.set("v", "0.7.3");
+    networkRequest = new Request(freshUrl.toString(), request);
+  }
+
   event.respondWith(
-    fetch(request)
+    fetch(networkRequest)
       .then(response => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);
