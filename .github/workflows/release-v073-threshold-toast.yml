@@ -1,5 +1,6 @@
 name: Release v0.7.3 threshold toast
 
+# Triggered after workflow registration.
 on:
   push:
     branches: [main]
