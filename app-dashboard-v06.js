@@ -250,7 +250,7 @@
       return selectedDayKey;
     }
 
-    const weekdayOffset = (today.getDay() + 6) % 7; // segunda = 0 ... domingo = 6
+    const weekdayOffset = (today.getDay() + 6) % 7;
     selectedDayKey = dateKey(addDays(start, weekdayOffset));
     return selectedDayKey;
   }
@@ -344,8 +344,6 @@
     const average = averageGroups.length
       ? averageGroups.reduce((sum, week) => sum + week.actualDoses, 0) / averageGroups.length
       : 0;
-    const markedCount = averageGroups.reduce((sum, week) => sum + week.markedDays.length, 0);
-    const hiddenCount = allGroups.filter(week => week.hidden).length;
 
     const weeklyAverage = $("#weeklyAverage");
     const averageText = `${formatNumber(average, 2)} doses`;
@@ -358,17 +356,13 @@
     const weeksCountText = String(visibleGroups.length);
     if (weeksCount && weeksCount.textContent !== weeksCountText) weeksCount.textContent = weeksCountText;
 
-    const mainNoteParts = [];
-    const historyNoteParts = [];
-
     const note = $("#averageExclusionNote");
-    const noteText = mainNoteParts.join(" · ");
-    if (note && note.textContent !== noteText) note.textContent = noteText;
+    if (note && note.textContent !== "") note.textContent = "";
 
     const historyDetail = $("#historyAverageDetail");
     if (historyDetail) {
       const detailText = averageGroups.length
-        ? `${averageGroups.length} ${averageGroups.length === 1 ? "semana considerada" : "semanas consideradas"} na média${historyNoteParts.length ? ` · ${historyNoteParts.join(" · ")}` : ""}`
+        ? `${averageGroups.length} ${averageGroups.length === 1 ? "semana considerada" : "semanas consideradas"} na média`
         : "Nenhuma semana encerrada";
       if (historyDetail.textContent !== detailText) historyDetail.textContent = detailText;
     }
@@ -417,11 +411,8 @@
       const hideFromHistory = week.hidden && week.key !== currentKey;
       card.hidden = hideFromHistory;
       card.classList.toggle("cqb-hidden-week", hideFromHistory);
-      if (hideFromHistory) {
-        card.style.setProperty("display", "none", "important");
-      } else {
-        card.style.removeProperty("display");
-      }
+      if (hideFromHistory) card.style.setProperty("display", "none", "important");
+      else card.style.removeProperty("display");
       card.setAttribute("aria-hidden", hideFromHistory ? "true" : "false");
       const existingDeleteButton = card.querySelector(".cqb-delete-week");
 
@@ -433,11 +424,9 @@
           title.textContent = "Semana atual";
         } else {
           const recentIndex = visibleDescending.findIndex(item => item.key === week.key);
-          if (recentIndex === 0) {
-            title.textContent = "Fim de semana passado";
-          } else if (recentIndex === 1) {
-            title.textContent = "Fim de semana retrasado";
-          } else {
+          if (recentIndex === 0) title.textContent = "Fim de semana passado";
+          else if (recentIndex === 1) title.textContent = "Fim de semana retrasado";
+          else {
             const chronologicalIndex = visibleAscending.findIndex(item => item.key === week.key);
             title.textContent = `Semana ${chronologicalIndex + 1}`;
           }
@@ -569,7 +558,14 @@
       );
       hiddenWeeks = new Set(
         snapshot.docs
-          .filter(item => item.id.startsWith(HIDDEN_WEEK_PREFIX) && item.data()?.hidden !== false)
+          .filter(item => {
+            const data = item.data();
+            if (!item.id.startsWith(HIDDEN_WEEK_PREFIX) || data?.hidden === false) return false;
+            const key = item.id.slice(HIDDEN_WEEK_PREFIX.length);
+            const hiddenAt = data?.updatedAt?.toDate?.();
+            const weekClosedAt = addDays(startOfWeek(key), 7);
+            return !hiddenAt || hiddenAt >= weekClosedAt;
+          })
           .map(item => item.id.slice(HIDDEN_WEEK_PREFIX.length))
       );
       scheduleRefresh();
@@ -582,6 +578,14 @@
     installWeekNavigationGuard();
     installHeroMetrics();
     installDaySelection();
+
+    const forceVersion = () => {
+      const version = $("#appVersion");
+      if (version && version.textContent !== "v0.7.4") version.textContent = "v0.7.4";
+    };
+    forceVersion();
+    const versionNode = $("#appVersion");
+    if (versionNode) new MutationObserver(forceVersion).observe(versionNode, { childList: true, characterData: true, subtree: true });
 
     window.addEventListener("cqb:today", () => {
       selectedDayKey = dateKey(new Date());
@@ -616,17 +620,13 @@
     }
 
     const dayGrid = $("#dayGrid");
-    if (dayGrid) {
-      new MutationObserver(scheduleRefresh).observe(dayGrid, { childList: true });
-    }
+    if (dayGrid) new MutationObserver(scheduleRefresh).observe(dayGrid, { childList: true });
 
     const weekList = $("#weekList");
-    if (weekList) {
-      new MutationObserver(scheduleRefresh).observe(weekList, { childList: true });
-    }
+    if (weekList) new MutationObserver(scheduleRefresh).observe(weekList, { childList: true });
 
     scheduleRefresh();
   }
 
-  init().catch(error => console.error("Falha ao carregar dashboard v0.6.2", error));
+  init().catch(error => console.error("Falha ao carregar dashboard v0.7.4", error));
 })();
