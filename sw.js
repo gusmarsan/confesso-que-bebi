@@ -35,8 +35,15 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  let networkRequest = request;
+  if (url.pathname.endsWith("/app-enhancements.js") || url.pathname.endsWith("/app-dashboard-v06.js")) {
+    const freshUrl = new URL(request.url);
+    freshUrl.searchParams.set("v", "0.7.4");
+    networkRequest = new Request(freshUrl.toString(), request);
+  }
+
   event.respondWith(
-    fetch(request)
+    fetch(networkRequest)
       .then(response => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);
