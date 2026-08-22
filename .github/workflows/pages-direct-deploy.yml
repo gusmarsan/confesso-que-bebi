@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -35,68 +35,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Apply v0.7.4 week navigation fix
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          dashboard_path = Path('app-dashboard-v06.js')
-          dashboard = dashboard_path.read_text(encoding='utf-8')
-          old = '''      hiddenWeeks = new Set(
-        snapshot.docs
-          .filter(item => item.id.startsWith(HIDDEN_WEEK_PREFIX) && item.data()?.hidden !== false)
-          .map(item => item.id.slice(HIDDEN_WEEK_PREFIX.length))
-      );'''
-          new = '''      hiddenWeeks = new Set(
-        snapshot.docs
-          .filter(item => {
-            const data = item.data();
-            if (!item.id.startsWith(HIDDEN_WEEK_PREFIX) || data?.hidden === false) return false;
-            const key = item.id.slice(HIDDEN_WEEK_PREFIX.length);
-            const hiddenAt = data?.updatedAt?.toDate?.();
-            const weekClosedAt = addDays(startOfWeek(key), 7);
-            // A hidden marker created while that week was still current is stale.
-            // Ignore it once the week closes, otherwise navigation flashes it and skips past it.
-            return !hiddenAt || hiddenAt >= weekClosedAt;
-          })
-          .map(item => item.id.slice(HIDDEN_WEEK_PREFIX.length))
-      );'''
-          if old not in dashboard:
-              raise SystemExit('hiddenWeeks block not found')
-          dashboard = dashboard.replace(old, new, 1)
-          dashboard_path.write_text(dashboard, encoding='utf-8')
-
-          index_path = Path('index.html')
-          index = index_path.read_text(encoding='utf-8')
-          index = index.replace('v0.7.2', 'v0.7.4').replace('v0.7.3', 'v0.7.4')
-          index_path.write_text(index, encoding='utf-8')
-
-          enhancements_path = Path('app-enhancements.js')
-          enhancements = enhancements_path.read_text(encoding='utf-8').replace('v0.7.3', 'v0.7.4')
-          enhancements_path.write_text(enhancements, encoding='utf-8')
-
-          sw_path = Path('sw.js')
-          sw = sw_path.read_text(encoding='utf-8')
-          sw = sw.replace('v0.7.2', 'v0.7.4').replace('v0.7.3', 'v0.7.4')
-          sw = sw.replace('app-enhancements.js?v=0.7"', 'app-enhancements.js?v=0.7.4"')
-          sw = sw.replace('app-dashboard-v06.js?v=0.7"', 'app-dashboard-v06.js?v=0.7.4"')
-          sw_path.write_text(sw, encoding='utf-8')
-
-          Path('version.txt').write_text('0.7.4\n', encoding='utf-8')
-          PY
-
-      - name: Commit v0.7.4 source changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app-dashboard-v06.js app-enhancements.js index.html sw.js version.txt
-          if git diff --cached --quiet; then
-            echo "No source changes to commit"
-          else
-            git commit -m "Release v0.7.4 fix previous week navigation"
-            git push
-          fi
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4
