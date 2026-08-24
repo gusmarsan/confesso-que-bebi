@@ -37,18 +37,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare v0.7.5 static bundle safely
+      - name: Prepare v0.7.5 static bundle
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
           VERSION = "0.7.5"
-          CACHE_REV = "0.7.5-fix1"
+          CACHE_REV = "0.7.5-fix2"
 
+          # Keep index simple: update visible version and cache-busting only.
+          # The dashboard module below is responsible for loading the charts,
+          # so no HTML injection is needed here.
           index_path = Path("index.html")
           html = index_path.read_text(encoding="utf-8")
-
           html = re.sub(
               r'(<span id="appVersion"[^>]*>)v[^<]+(</span>)',
               rf'\1v{VERSION}\2',
@@ -65,31 +67,39 @@ jobs:
               f'app-dashboard-v06.js?v={VERSION}',
               html,
           )
-
-          history_script = f'<script type="module" src="./history-charts-v075.js?v={VERSION}"></script>'
-          if "history-charts-v075.js" not in html:
-              closing_body = html.rfind("</body>")
-              if closing_body == -1:
-                  raise RuntimeError("Fechamento </body> não encontrado em index.html")
-              html = html[:closing_body] + f'  {history_script}\n' + html[closing_body:]
-
-          if html.count("history-charts-v075.js") != 1:
-              raise RuntimeError("O script dos gráficos foi inserido em local inesperado")
-
           index_path.write_text(html, encoding="utf-8")
 
+          # Align the enhancements version label.
           enhancements_path = Path("app-enhancements.js")
           enhancements = enhancements_path.read_text(encoding="utf-8")
           enhancements = enhancements.replace('"v0.7.3"', f'"v{VERSION}"')
           enhancements_path.write_text(enhancements, encoding="utf-8")
 
+          # The dashboard is already loaded by every current web build.
+          # Make it the single reliable loader for the history charts.
+          dashboard_path = Path("app-dashboard-v06.js")
+          dashboard = dashboard_path.read_text(encoding="utf-8")
+          dashboard = dashboard.replace('"v0.7.4"', f'"v{VERSION}"')
+          loader_marker = "__cqbHistoryChartsLoaderV075"
+          if loader_marker not in dashboard:
+              dashboard += f'''\n\n;(() => {{\n  if (window.{loader_marker}) return;\n  window.{loader_marker} = true;\n  import("./history-charts-v075.js?v={VERSION}")\n    .catch(error => console.error("Falha ao carregar gráficos do Histórico v{VERSION}", error));\n}})();\n'''
+          dashboard_path.write_text(dashboard, encoding="utf-8")
+
+          # Force a new service-worker cache generation so stale bundles are discarded.
           sw_path = Path("sw.js")
           sw = sw_path.read_text(encoding="utf-8")
           sw = re.sub(r'confesso-que-bebi-pwa-v[^"\']+', f'confesso-que-bebi-pwa-v{CACHE_REV}', sw)
           sw = re.sub(r'app-enhancements\.js\?v=[^"\']+', f'app-enhancements.js?v={VERSION}', sw)
           sw = re.sub(r'app-dashboard-v06\.js\?v=[^"\']+', f'app-dashboard-v06.js?v={VERSION}', sw)
+          sw = re.sub(r'history-charts-v075\.js\?v=[^"\']+', f'history-charts-v075.js?v={VERSION}', sw)
           sw_path.write_text(sw, encoding="utf-8")
           PY
+
+      - name: Verify chart loader in bundle
+        run: |
+          grep -q '__cqbHistoryChartsLoaderV075' app-dashboard-v06.js
+          grep -q 'history-charts-v075.js?v=0.7.5' app-dashboard-v06.js
+          test -f history-charts-v075.js
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4
