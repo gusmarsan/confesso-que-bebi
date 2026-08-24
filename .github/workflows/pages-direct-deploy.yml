@@ -1,7 +1,5 @@
 name: Direct Pages deploy
 
-# Force v0.7.5 web redeploy after confirming the public bundle was stale.
-# PR merge trigger: 2026-08-24.
 on:
   push:
     branches: [main]
@@ -39,27 +37,59 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Prepare v0.7.5 static bundle
+      - name: Prepare v0.7.5 static bundle safely
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
-          path = Path('index.html')
-          html = path.read_text(encoding='utf-8')
+          VERSION = "0.7.5"
+
+          index_path = Path("index.html")
+          html = index_path.read_text(encoding="utf-8")
 
           html = re.sub(
               r'(<span id="appVersion"[^>]*>)v[^<]+(</span>)',
-              r'\1v0.7.5\2',
+              rf'\1v{VERSION}\2',
               html,
               count=1,
           )
+          html = re.sub(
+              r'app-enhancements\.js\?v=[^"\']+',
+              f'app-enhancements.js?v={VERSION}',
+              html,
+          )
+          html = re.sub(
+              r'app-dashboard-v06\.js\?v=[^"\']+',
+              f'app-dashboard-v06.js?v={VERSION}',
+              html,
+          )
 
-          script = '<script type="module" src="./history-charts-v075.js?v=0.7.5"></script>'
-          if 'history-charts-v075.js' not in html:
-              html = html.replace('</body>', f'  {script}\n</body>')
+          history_script = f'<script type="module" src="./history-charts-v075.js?v={VERSION}"></script>'
+          if "history-charts-v075.js" not in html:
+              closing_body = html.rfind("</body>")
+              if closing_body == -1:
+                  raise RuntimeError("Fechamento </body> não encontrado em index.html")
+              html = html[:closing_body] + f'  {history_script}\n' + html[closing_body:]
 
-          path.write_text(html, encoding='utf-8')
+          # O relatório semanal contém outro </body> dentro de uma template string.
+          # Garantimos que o script dos gráficos foi inserido apenas no fechamento real da página.
+          if html.count("history-charts-v075.js") != 1:
+              raise RuntimeError("O script dos gráficos foi inserido em local inesperado")
+
+          index_path.write_text(html, encoding="utf-8")
+
+          enhancements_path = Path("app-enhancements.js")
+          enhancements = enhancements_path.read_text(encoding="utf-8")
+          enhancements = enhancements.replace('"v0.7.3"', f'"v{VERSION}"')
+          enhancements_path.write_text(enhancements, encoding="utf-8")
+
+          sw_path = Path("sw.js")
+          sw = sw_path.read_text(encoding="utf-8")
+          sw = re.sub(r'confesso-que-bebi-pwa-v[^"\']+', f'confesso-que-bebi-pwa-v{VERSION}', sw)
+          sw = re.sub(r'app-enhancements\.js\?v=[^"\']+', f'app-enhancements.js?v={VERSION}', sw)
+          sw = re.sub(r'app-dashboard-v06\.js\?v=[^"\']+', f'app-dashboard-v06.js?v={VERSION}', sw)
+          sw_path.write_text(sw, encoding="utf-8")
           PY
 
       - name: Upload static site
