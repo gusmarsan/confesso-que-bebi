@@ -88,7 +88,7 @@
       .sort((a, b) => a.key.localeCompare(b.key));
   }
 
-  function lineChartSvg(points, color, title) {
+  function lineChartSvg(points, color, title, limit) {
     const width = Math.max(292, 52 + points.length * 58);
     const height = 154;
     const left = 32;
@@ -108,13 +108,15 @@
       return `<line x1="${left}" y1="${y}" x2="${width-right}" y2="${y}" stroke="#eee5ed" stroke-width="1"/><text x="${left-6}" y="${y+3}" text-anchor="end" fill="#625a70" font-size="9" font-weight="700">${label}</text>`;
     }).join("");
 
+    const limitLine = `<line x1="${left}" y1="${yAt(limit)}" x2="${width-right}" y2="${yAt(limit)}" stroke="${color}" stroke-width="1" stroke-dasharray="6 4" opacity=".65"/>`;
+
     const dots = points.map((point, index) => {
       const x = xAt(index);
       const y = yAt(point.doses);
       return `<g><circle cx="${x}" cy="${y}" r="2" fill="${color}" stroke="#FFFDFC" stroke-width="1"><title>${formatShortDateKey(point.key)} · ${formatNumber(point.doses, 2)} doses</title></circle><text x="${x}" y="${height-8}" text-anchor="middle" fill="#625a70" font-size="9" font-weight="700">${formatShortDateKey(point.key)}</text></g>`;
     }).join("");
 
-    return `<svg class="cqb-history-chart-svg" viewBox="0 0 ${width} ${height}" width="${width}" role="img" aria-label="${title}: evolução das doses registradas"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>${grid}${dots}</svg>`;
+    return `<svg class="cqb-history-chart-svg" viewBox="0 0 ${width} ${height}" width="${width}" role="img" aria-label="${title}: evolução das doses registradas"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>${grid}${limitLine}${dots}</svg>`;
   }
 
   function ensureSection() {
@@ -137,9 +139,9 @@
     if (!section) return;
 
     const definitions = [
-      { day: 5, title: "Sextas-feiras", color: "#E8644A" },
-      { day: 6, title: "Sábados", color: "#344C73" },
-      { day: 0, title: "Domingos", color: "#4BA9B8" }
+      { day: 5, title: "Sextas-feiras", color: "#E8644A", limit: 12 },
+      { day: 6, title: "Sábados", color: "#344C73", limit: 25 },
+      { day: 0, title: "Domingos", color: "#4BA9B8", limit: 13 }
     ];
 
     const cards = definitions.map(definition => {
@@ -149,7 +151,7 @@
       }
       const latest = points.at(-1);
       const countLabel = `${points.length} ${points.length === 1 ? "dia" : "dias"}`;
-      return `<article class="cqb-history-day-chart-card"><header><h3>${definition.title}</h3><span>${countLabel}</span></header><div class="cqb-history-chart-scroll">${lineChartSvg(points, definition.color, definition.title)}</div><div class="cqb-history-chart-summary"><strong>${formatNumber(latest.doses, 2)} doses</strong><small>último · ${formatShortDateKey(latest.key)}</small></div></article>`;
+      return `<article class="cqb-history-day-chart-card"><header><h3>${definition.title}</h3><span>${countLabel}</span></header><div class="cqb-history-chart-scroll">${lineChartSvg(points, definition.color, definition.title, definition.limit)}</div><div class="cqb-history-chart-summary"><strong>${formatNumber(latest.doses, 2)} doses</strong><small>último · ${formatShortDateKey(latest.key)}</small></div></article>`;
     }).join("");
 
     section.innerHTML = `<div class="cqb-history-day-charts-head"><h2>Por dia da semana</h2><p>Evolução das doses registradas em sextas, sábados e domingos</p></div><div class="cqb-history-day-chart-grid">${cards}</div>`;
