@@ -225,7 +225,7 @@
 
   function enforceVersionLabel() {
     const version = $("#appVersion");
-    if (version && version.textContent !== "v0.7.3") version.textContent = "v0.7.3";
+    if (version && version.textContent !== "v0.7.5") version.textContent = "v0.7.5";
   }
 
   function updateControl() {

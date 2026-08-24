@@ -1,4 +1,4 @@
-const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.5-fix1";
+const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.5-fix4";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -14,74 +14,28 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => undefined)
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => undefined));
   self.skipWaiting();
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-    ))
-  );
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));
   self.clients.claim();
 });
-
-function isMainHtml(url) {
-  return url.pathname.endsWith("/confesso-que-bebi/") || url.pathname.endsWith("/confesso-que-bebi/index.html");
-}
-
-async function withHistoryCharts(response) {
-  if (!response || !response.ok) return response;
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("text/html")) return response;
-
-  const html = await response.text();
-  if (html.includes("history-charts-v075.js")) {
-    return new Response(html, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers
-    });
-  }
-
-  const closingBody = html.lastIndexOf("</body>");
-  if (closingBody === -1) return response;
-
-  const script = '<script type="module" src="./history-charts-v075.js?v=0.7.5"></script>\n';
-  const injected = html.slice(0, closingBody) + script + html.slice(closingBody);
-  const headers = new Headers(response.headers);
-  headers.delete("content-length");
-  return new Response(injected, {
-    status: response.status,
-    statusText: response.statusText,
-    headers
-  });
-}
 
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;
-
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
-
-  let networkRequest = request;
-  if (url.pathname.endsWith("/app-enhancements.js") || url.pathname.endsWith("/app-dashboard-v06.js")) {
-    const freshUrl = new URL(request.url);
-    freshUrl.searchParams.set("v", "0.7.5");
-    networkRequest = new Request(freshUrl.toString(), request);
-  }
-
   event.respondWith(
-    fetch(networkRequest)
-      .then(async response => {
-        const served = isMainHtml(url) ? await withHistoryCharts(response) : response;
-        const copy = served.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);
-        return served;
+    fetch(request, {cache:"no-store"})
+      .then(response => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);
+        }
+        return response;
       })
       .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html")))
   );

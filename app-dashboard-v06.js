@@ -581,7 +581,7 @@
 
     const forceVersion = () => {
       const version = $("#appVersion");
-      if (version && version.textContent !== "v0.7.4") version.textContent = "v0.7.4";
+      if (version && version.textContent !== "v0.7.5") version.textContent = "v0.7.5";
     };
     forceVersion();
     const versionNode = $("#appVersion");
@@ -629,4 +629,12 @@
   }
 
   init().catch(error => console.error("Falha ao carregar dashboard v0.7.4", error));
+})();
+
+
+;(() => {
+  if (window.__cqbHistoryChartsLoaderV075) return;
+  window.__cqbHistoryChartsLoaderV075 = true;
+  import("./history-charts-v075.js?v=0.7.5")
+    .catch(error => console.error("Falha ao carregar gráficos do Histórico v0.7.5", error));
 })();
