@@ -1,5 +1,6 @@
 name: Direct Pages deploy
 
+# Force redeploy v0.7.5 after history charts were added.
 on:
   push:
     branches: [main]
