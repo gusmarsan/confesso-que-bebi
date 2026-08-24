@@ -44,11 +44,9 @@ jobs:
           import re
 
           VERSION = "0.7.5"
-          CACHE_REV = "0.7.5-fix2"
+          CACHE_REV = "0.7.5-fix3"
+          SW_MARKER = "cqb-sw-self-update-075-fix3"
 
-          # Keep index simple: update visible version and cache-busting only.
-          # The dashboard module below is responsible for loading the charts,
-          # so no HTML injection is needed here.
           index_path = Path("index.html")
           html = index_path.read_text(encoding="utf-8")
           html = re.sub(
@@ -67,16 +65,22 @@ jobs:
               f'app-dashboard-v06.js?v={VERSION}',
               html,
           )
+
+          # Force browsers already controlled by an old worker to update it immediately.
+          if SW_MARKER not in html:
+              marker = '<body class="auth-pending">'
+              updater = f'''\n  <script id="{SW_MARKER}">\n  (() => {{\n    if (!("serviceWorker" in navigator)) return;\n    const reloadKey = "{SW_MARKER}-reloaded";\n    navigator.serviceWorker.addEventListener("controllerchange", () => {{\n      if (sessionStorage.getItem(reloadKey)) return;\n      sessionStorage.setItem(reloadKey, "1");\n      location.reload();\n    }});\n    navigator.serviceWorker.register("./sw.js?rev={CACHE_REV}", {{scope:"./", updateViaCache:"none"}})\n      .then(registration => registration.update())\n      .catch(error => console.error("Falha ao atualizar service worker", error));\n  }})();\n  </script>'''
+              if marker not in html:
+                  raise RuntimeError("Marcador do body não encontrado em index.html")
+              html = html.replace(marker, marker + updater, 1)
+
           index_path.write_text(html, encoding="utf-8")
 
-          # Align the enhancements version label.
           enhancements_path = Path("app-enhancements.js")
           enhancements = enhancements_path.read_text(encoding="utf-8")
           enhancements = enhancements.replace('"v0.7.3"', f'"v{VERSION}"')
           enhancements_path.write_text(enhancements, encoding="utf-8")
 
-          # The dashboard is already loaded by every current web build.
-          # Make it the single reliable loader for the history charts.
           dashboard_path = Path("app-dashboard-v06.js")
           dashboard = dashboard_path.read_text(encoding="utf-8")
           dashboard = dashboard.replace('"v0.7.4"', f'"v{VERSION}"')
@@ -85,20 +89,18 @@ jobs:
               dashboard += f'''\n\n;(() => {{\n  if (window.{loader_marker}) return;\n  window.{loader_marker} = true;\n  import("./history-charts-v075.js?v={VERSION}")\n    .catch(error => console.error("Falha ao carregar gráficos do Histórico v{VERSION}", error));\n}})();\n'''
           dashboard_path.write_text(dashboard, encoding="utf-8")
 
-          # Force a new service-worker cache generation so stale bundles are discarded.
-          sw_path = Path("sw.js")
-          sw = sw_path.read_text(encoding="utf-8")
-          sw = re.sub(r'confesso-que-bebi-pwa-v[^"\']+', f'confesso-que-bebi-pwa-v{CACHE_REV}', sw)
-          sw = re.sub(r'app-enhancements\.js\?v=[^"\']+', f'app-enhancements.js?v={VERSION}', sw)
-          sw = re.sub(r'app-dashboard-v06\.js\?v=[^"\']+', f'app-dashboard-v06.js?v={VERSION}', sw)
-          sw = re.sub(r'history-charts-v075\.js\?v=[^"\']+', f'history-charts-v075.js?v={VERSION}', sw)
-          sw_path.write_text(sw, encoding="utf-8")
+          # Replace the old worker with a simple network-first worker. No version rewriting.
+          sw = f'''const CACHE_NAME = "confesso-que-bebi-pwa-v{CACHE_REV}";\nconst APP_SHELL = [\n  "./",\n  "./index.html",\n  "./acesso.html",\n  "./reset.html",\n  "./install.html",\n  "./manifest.webmanifest",\n  "./app-enhancements.js?v={VERSION}",\n  "./app-dashboard-v06.js?v={VERSION}",\n  "./history-charts-v075.js?v={VERSION}",\n  "./icon-192.png",\n  "./icon-512.png"\n];\n\nself.addEventListener("install", event => {{\n  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => undefined));\n  self.skipWaiting();\n}});\n\nself.addEventListener("activate", event => {{\n  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));\n  self.clients.claim();\n}});\n\nself.addEventListener("fetch", event => {{\n  const request = event.request;\n  if (request.method !== "GET") return;\n  const url = new URL(request.url);\n  if (url.origin !== self.location.origin) return;\n  event.respondWith(\n    fetch(request)\n      .then(response => {{\n        const copy = response.clone();\n        caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);\n        return response;\n      }})\n      .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html")))\n  );\n}});\n'''
+          Path("sw.js").write_text(sw, encoding="utf-8")
           PY
 
-      - name: Verify chart loader in bundle
+      - name: Verify v0.7.5 bundle
         run: |
+          grep -q 'cqb-sw-self-update-075-fix3' index.html
           grep -q '__cqbHistoryChartsLoaderV075' app-dashboard-v06.js
           grep -q 'history-charts-v075.js?v=0.7.5' app-dashboard-v06.js
+          grep -q 'confesso-que-bebi-pwa-v0.7.5-fix3' sw.js
+          grep -q 'const yMax = 30' history-charts-v075.js
           test -f history-charts-v075.js
 
       - name: Upload static site
