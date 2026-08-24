@@ -1,6 +1,5 @@
 name: Direct Pages deploy
 
-# Force redeploy v0.7.5 after history charts were added.
 on:
   push:
     branches: [main]
@@ -37,6 +36,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Prepare v0.7.5 static bundle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('index.html')
+          html = path.read_text(encoding='utf-8')
+
+          html = re.sub(
+              r'(<span id="appVersion"[^>]*>)v[^<]+(</span>)',
+              r'\1v0.7.5\2',
+              html,
+              count=1,
+          )
+
+          script = '<script type="module" src="./history-charts-v075.js?v=0.7.5"></script>'
+          if 'history-charts-v075.js' not in html:
+              html = html.replace('</body>', f'  {script}\n</body>')
+
+          path.write_text(html, encoding='utf-8')
+          PY
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4
