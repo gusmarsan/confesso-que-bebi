@@ -5,6 +5,7 @@
   const FIREBASE_VERSION = "12.16.0";
   let entries = [];
   let unsubscribeEntries = null;
+  let versionObserver = null;
 
   const $ = selector => document.querySelector(selector);
   const pad = value => String(value).padStart(2, "0");
@@ -28,12 +29,18 @@
 
   function installVersionLabel() {
     const current = $("#appVersion");
-    if (!current || current.dataset.cqbV075 === "1") return;
-    const replacement = current.cloneNode(true);
-    replacement.textContent = "v0.7.5";
-    replacement.dataset.cqbV075 = "1";
-    replacement.setAttribute("aria-label", "Versão do app 0.7.5");
-    current.replaceWith(replacement);
+    if (!current) return;
+    if (current.textContent !== "v0.7.5") current.textContent = "v0.7.5";
+    current.dataset.cqbV075 = "1";
+    current.setAttribute("aria-label", "Versão do app 0.7.5");
+
+    if (!versionObserver) {
+      versionObserver = new MutationObserver(() => {
+        const version = $("#appVersion");
+        if (version && version.textContent !== "v0.7.5") version.textContent = "v0.7.5";
+      });
+      versionObserver.observe(current, { childList: true, characterData: true, subtree: true });
+    }
   }
 
   function installStyles() {
