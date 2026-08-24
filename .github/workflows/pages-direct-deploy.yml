@@ -44,6 +44,7 @@ jobs:
           import re
 
           VERSION = "0.7.5"
+          CACHE_REV = "0.7.5-fix1"
 
           index_path = Path("index.html")
           html = index_path.read_text(encoding="utf-8")
@@ -72,8 +73,6 @@ jobs:
                   raise RuntimeError("Fechamento </body> não encontrado em index.html")
               html = html[:closing_body] + f'  {history_script}\n' + html[closing_body:]
 
-          # O relatório semanal contém outro </body> dentro de uma template string.
-          # Garantimos que o script dos gráficos foi inserido apenas no fechamento real da página.
           if html.count("history-charts-v075.js") != 1:
               raise RuntimeError("O script dos gráficos foi inserido em local inesperado")
 
@@ -86,7 +85,7 @@ jobs:
 
           sw_path = Path("sw.js")
           sw = sw_path.read_text(encoding="utf-8")
-          sw = re.sub(r'confesso-que-bebi-pwa-v[^"\']+', f'confesso-que-bebi-pwa-v{VERSION}', sw)
+          sw = re.sub(r'confesso-que-bebi-pwa-v[^"\']+', f'confesso-que-bebi-pwa-v{CACHE_REV}', sw)
           sw = re.sub(r'app-enhancements\.js\?v=[^"\']+', f'app-enhancements.js?v={VERSION}', sw)
           sw = re.sub(r'app-dashboard-v06\.js\?v=[^"\']+', f'app-dashboard-v06.js?v={VERSION}', sw)
           sw_path.write_text(sw, encoding="utf-8")

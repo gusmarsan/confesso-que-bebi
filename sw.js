@@ -1,4 +1,4 @@
-const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.5";
+const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.5-fix1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,8 +6,8 @@ const APP_SHELL = [
   "./reset.html",
   "./install.html",
   "./manifest.webmanifest",
-  "./app-enhancements.js?v=0.7.4",
-  "./app-dashboard-v06.js?v=0.7.4",
+  "./app-enhancements.js?v=0.7.5",
+  "./app-dashboard-v06.js?v=0.7.5",
   "./history-charts-v075.js?v=0.7.5",
   "./icon-192.png",
   "./icon-512.png"
@@ -47,10 +47,11 @@ async function withHistoryCharts(response) {
     });
   }
 
-  const injected = html.replace(
-    "</body>",
-    '<script type="module" src="./history-charts-v075.js?v=0.7.5"></script>\n</body>'
-  );
+  const closingBody = html.lastIndexOf("</body>");
+  if (closingBody === -1) return response;
+
+  const script = '<script type="module" src="./history-charts-v075.js?v=0.7.5"></script>\n';
+  const injected = html.slice(0, closingBody) + script + html.slice(closingBody);
   const headers = new Headers(response.headers);
   headers.delete("content-length");
   return new Response(injected, {
@@ -70,7 +71,7 @@ self.addEventListener("fetch", event => {
   let networkRequest = request;
   if (url.pathname.endsWith("/app-enhancements.js") || url.pathname.endsWith("/app-dashboard-v06.js")) {
     const freshUrl = new URL(request.url);
-    freshUrl.searchParams.set("v", "0.7.4");
+    freshUrl.searchParams.set("v", "0.7.5");
     networkRequest = new Request(freshUrl.toString(), request);
   }
 
