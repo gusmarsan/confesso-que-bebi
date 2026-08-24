@@ -1,6 +1,7 @@
 name: Direct Pages deploy
 
 # Force v0.7.5 web redeploy after confirming the public bundle was stale.
+# PR merge trigger: 2026-08-24.
 on:
   push:
     branches: [main]
