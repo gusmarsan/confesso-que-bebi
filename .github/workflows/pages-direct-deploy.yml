@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -36,16 +36,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Prepare v0.7.5 static bundle
+      - name: Prepare authoritative v0.7.5 source
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
           VERSION = "0.7.5"
-          CACHE_REV = "0.7.5-fix3"
-          SW_MARKER = "cqb-sw-self-update-075-fix3"
+          CACHE_REV = "0.7.5-fix4"
+          SW_MARKER = "cqb-sw-bootstrap-075-fix4"
 
           index_path = Path("index.html")
           html = index_path.read_text(encoding="utf-8")
@@ -66,7 +68,15 @@ jobs:
               html,
           )
 
-          # Force browsers already controlled by an old worker to update it immediately.
+          # Load charts directly from the page, in addition to the dashboard loader.
+          chart_script = f'<script type="module" src="./history-charts-v075.js?v={VERSION}"></script>'
+          if chart_script not in html:
+              closing_body = html.rfind("</body>")
+              if closing_body == -1:
+                  raise RuntimeError("Fechamento </body> não encontrado em index.html")
+              html = html[:closing_body] + f'  {chart_script}\n' + html[closing_body:]
+
+          # Force any old worker to be replaced immediately and bypass HTTP cache for updates.
           if SW_MARKER not in html:
               marker = '<body class="auth-pending">'
               updater = f'''\n  <script id="{SW_MARKER}">\n  (() => {{\n    if (!("serviceWorker" in navigator)) return;\n    const reloadKey = "{SW_MARKER}-reloaded";\n    navigator.serviceWorker.addEventListener("controllerchange", () => {{\n      if (sessionStorage.getItem(reloadKey)) return;\n      sessionStorage.setItem(reloadKey, "1");\n      location.reload();\n    }});\n    navigator.serviceWorker.register("./sw.js?rev={CACHE_REV}", {{scope:"./", updateViaCache:"none"}})\n      .then(registration => registration.update())\n      .catch(error => console.error("Falha ao atualizar service worker", error));\n  }})();\n  </script>'''
@@ -78,30 +88,57 @@ jobs:
 
           enhancements_path = Path("app-enhancements.js")
           enhancements = enhancements_path.read_text(encoding="utf-8")
-          enhancements = enhancements.replace('"v0.7.3"', f'"v{VERSION}"')
+          enhancements = re.sub(r'"v0\.7\.[0-9]+"', f'"v{VERSION}"', enhancements)
           enhancements_path.write_text(enhancements, encoding="utf-8")
 
           dashboard_path = Path("app-dashboard-v06.js")
           dashboard = dashboard_path.read_text(encoding="utf-8")
-          dashboard = dashboard.replace('"v0.7.4"', f'"v{VERSION}"')
+          dashboard = re.sub(r'"v0\.7\.[0-9]+"', f'"v{VERSION}"', dashboard)
           loader_marker = "__cqbHistoryChartsLoaderV075"
           if loader_marker not in dashboard:
               dashboard += f'''\n\n;(() => {{\n  if (window.{loader_marker}) return;\n  window.{loader_marker} = true;\n  import("./history-charts-v075.js?v={VERSION}")\n    .catch(error => console.error("Falha ao carregar gráficos do Histórico v{VERSION}", error));\n}})();\n'''
           dashboard_path.write_text(dashboard, encoding="utf-8")
 
-          # Replace the old worker with a simple network-first worker. No version rewriting.
-          sw = f'''const CACHE_NAME = "confesso-que-bebi-pwa-v{CACHE_REV}";\nconst APP_SHELL = [\n  "./",\n  "./index.html",\n  "./acesso.html",\n  "./reset.html",\n  "./install.html",\n  "./manifest.webmanifest",\n  "./app-enhancements.js?v={VERSION}",\n  "./app-dashboard-v06.js?v={VERSION}",\n  "./history-charts-v075.js?v={VERSION}",\n  "./icon-192.png",\n  "./icon-512.png"\n];\n\nself.addEventListener("install", event => {{\n  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => undefined));\n  self.skipWaiting();\n}});\n\nself.addEventListener("activate", event => {{\n  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));\n  self.clients.claim();\n}});\n\nself.addEventListener("fetch", event => {{\n  const request = event.request;\n  if (request.method !== "GET") return;\n  const url = new URL(request.url);\n  if (url.origin !== self.location.origin) return;\n  event.respondWith(\n    fetch(request)\n      .then(response => {{\n        const copy = response.clone();\n        caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);\n        return response;\n      }})\n      .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html")))\n  );\n}});\n'''
+          # Keep install page on the same worker revision and bypass update cache.
+          install_path = Path("install.html")
+          install = install_path.read_text(encoding="utf-8")
+          install = re.sub(
+              r'navigator\.serviceWorker\.register\("/confesso-que-bebi/sw\.js(?:\?rev=[^"]+)?", \{scope:"/confesso-que-bebi/"(?:,updateViaCache:"none")?\}\)',
+              f'navigator.serviceWorker.register("/confesso-que-bebi/sw.js?rev={CACHE_REV}", {{scope:"/confesso-que-bebi/",updateViaCache:"none"}})',
+              install,
+          )
+          install_path.write_text(install, encoding="utf-8")
+
+          # Simple network-first worker. It never rewrites asset versions or HTML.
+          sw = f'''const CACHE_NAME = "confesso-que-bebi-pwa-v{CACHE_REV}";\nconst APP_SHELL = [\n  "./",\n  "./index.html",\n  "./acesso.html",\n  "./reset.html",\n  "./install.html",\n  "./manifest.webmanifest",\n  "./app-enhancements.js?v={VERSION}",\n  "./app-dashboard-v06.js?v={VERSION}",\n  "./history-charts-v075.js?v={VERSION}",\n  "./icon-192.png",\n  "./icon-512.png"\n];\n\nself.addEventListener("install", event => {{\n  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => undefined));\n  self.skipWaiting();\n}});\n\nself.addEventListener("activate", event => {{\n  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));\n  self.clients.claim();\n}});\n\nself.addEventListener("fetch", event => {{\n  const request = event.request;\n  if (request.method !== "GET") return;\n  const url = new URL(request.url);\n  if (url.origin !== self.location.origin) return;\n  event.respondWith(\n    fetch(request, {{cache:"no-store"}})\n      .then(response => {{\n        if (response && response.ok) {{\n          const copy = response.clone();\n          caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);\n        }}\n        return response;\n      }})\n      .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html")))\n  );\n}});\n'''
           Path("sw.js").write_text(sw, encoding="utf-8")
+
+          Path("version.txt").write_text(f"{VERSION}\n", encoding="utf-8")
           PY
 
-      - name: Verify v0.7.5 bundle
+      - name: Verify v0.7.5 source bundle
         run: |
-          grep -q 'cqb-sw-self-update-075-fix3' index.html
+          grep -q '>v0.7.5</span>' index.html
+          grep -q 'app-enhancements.js?v=0.7.5' index.html
+          grep -q 'app-dashboard-v06.js?v=0.7.5' index.html
+          grep -q 'history-charts-v075.js?v=0.7.5' index.html
+          grep -q 'cqb-sw-bootstrap-075-fix4' index.html
           grep -q '__cqbHistoryChartsLoaderV075' app-dashboard-v06.js
-          grep -q 'history-charts-v075.js?v=0.7.5' app-dashboard-v06.js
-          grep -q 'confesso-que-bebi-pwa-v0.7.5-fix3' sw.js
           grep -q 'const yMax = 30' history-charts-v075.js
-          test -f history-charts-v075.js
+          grep -q 'stroke-width="1.5"' history-charts-v075.js
+          grep -q 'r="2"' history-charts-v075.js
+          grep -q 'confesso-que-bebi-pwa-v0.7.5-fix4' sw.js
+          grep -q '^0.7.5$' version.txt
+
+      - name: Sync prepared source to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html app-enhancements.js app-dashboard-v06.js history-charts-v075.js sw.js install.html version.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Make v0.7.5 source authoritative"
+            git push origin HEAD:main
+          fi
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v4
