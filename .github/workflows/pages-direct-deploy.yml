@@ -9,6 +9,7 @@ on:
       - "reset.html"
       - "app-enhancements.js"
       - "app-dashboard-v06.js"
+      - "history-charts-v075.js"
       - "manifest.webmanifest"
       - "sw.js"
       - "install.html"
