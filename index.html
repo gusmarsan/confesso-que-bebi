@@ -452,16 +452,16 @@
   </style>
 </head>
 <body class="auth-pending">
-  <script id="cqb-sw-bootstrap-075-fix4">
+  <script id="cqb-sw-bootstrap-076-fix1">
   (() => {
     if (!("serviceWorker" in navigator)) return;
-    const reloadKey = "cqb-sw-bootstrap-075-fix4-reloaded";
+    const reloadKey = "cqb-sw-bootstrap-076-fix1-reloaded";
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (sessionStorage.getItem(reloadKey)) return;
       sessionStorage.setItem(reloadKey, "1");
       location.reload();
     });
-    navigator.serviceWorker.register("./sw.js?rev=0.7.5-fix4", {scope:"./", updateViaCache:"none"})
+    navigator.serviceWorker.register("./sw.js?rev=0.7.6-fix1", {scope:"./", updateViaCache:"none"})
       .then(registration => registration.update())
       .catch(error => console.error("Falha ao atualizar service worker", error));
   })();
@@ -511,7 +511,7 @@
         </div>
       </div>
       <div class="account-tools">
-        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.7.5</span>
+        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.7.6</span>
         <div id="syncStatus" class="saved-pill syncing">Conectando</div>
         <button id="logoutButton" class="logout-button" type="button">Sair</button>
       </div>
@@ -1843,8 +1843,9 @@
     resetEntryForm();
     renderAll();
   </script>
-  <script type="module" src="./app-enhancements.js?v=0.7.5"></script>
-  <script type="module" src="./app-dashboard-v06.js?v=0.7.5"></script>
-  <script type="module" src="./history-charts-v075.js?v=0.7.5"></script>
+  <script type="module" src="./app-enhancements.js?v=0.7.6"></script>
+  <script type="module" src="./app-dashboard-v06.js?v=0.7.6"></script>
+  <script type="module" src="./history-charts-v075.js?v=0.7.6"></script>
+  <script type="module" src="./backup-xlsx-v076.js?v=0.7.6"></script>
 </body>
 </html>
