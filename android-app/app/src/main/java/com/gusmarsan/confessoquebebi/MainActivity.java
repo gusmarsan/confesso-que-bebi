@@ -16,11 +16,14 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
 
-    private static final String APP_URL = "https://gusmarsan.github.io/confesso-que-bebi/index.html";
+    private static final String APP_BASE_URL = "https://gusmarsan.github.io/confesso-que-bebi/index.html";
     private static final String LOGIN_URL = "https://gusmarsan.github.io/confesso-que-bebi/acesso.html";
     private static final String ENHANCEMENTS_URL = "https://gusmarsan.github.io/confesso-que-bebi/app-enhancements.js";
+    private static final String DASHBOARD_URL = "https://gusmarsan.github.io/confesso-que-bebi/app-dashboard-v06.js";
+    private static final String HISTORY_CHARTS_URL = "https://gusmarsan.github.io/confesso-que-bebi/history-charts-v075.js";
     private static final String APP_HOST = "gusmarsan.github.io";
     private static final String AUTH_HOST = "confesso-que-bebi.firebaseapp.com";
+    private static final String APP_VERSION = "0.7.5";
 
     private WebView webView;
     private int authProbeAttempts = 0;
@@ -38,6 +41,10 @@ public class MainActivity extends Activity {
         setContentView(webView);
         configureWebView();
 
+        // Remove stale HTML/script responses from older wrappers without touching
+        // cookies or DOM storage, so the Firebase session remains available.
+        webView.clearCache(true);
+
         if (savedInstanceState != null) {
             webView.restoreState(savedInstanceState);
         } else {
@@ -45,18 +52,22 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String freshAppUrl() {
+        return APP_BASE_URL + "?native=" + APP_VERSION + "&ts=" + System.currentTimeMillis();
+    }
+
     private void configureWebView() {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/0.7.2");
+        settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/" + APP_VERSION);
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -81,8 +92,8 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 CookieManager.getInstance().flush();
                 if (isAppPage(url)) {
-                    installEnhancements(view);
-                    view.evaluateJavascript("(function(){var v=document.getElementById('appVersion');if(v)v.textContent='v0.7.2';})()", null);
+                    installFreshModules(view);
+                    forceVersionLabel(view);
                     revealWhenAuthIsReady(view);
                 } else {
                     view.setVisibility(View.VISIBLE);
@@ -102,13 +113,26 @@ public class MainActivity extends Activity {
                 || "/confesso-que-bebi/index.html".equals(path);
     }
 
-    private void installEnhancements(WebView view) {
+    private void installFreshModules(WebView view) {
         final String script = "(function(){"
-                + "if(document.getElementById('cqb-enhancements-script'))return;"
+                + "function add(id,src){"
+                + "if(document.getElementById(id))return;"
                 + "var s=document.createElement('script');"
-                + "s.id='cqb-enhancements-script';"
-                + "s.src='" + ENHANCEMENTS_URL + "?ts='+Date.now();"
+                + "s.id=id;s.type='module';s.src=src+'?ts='+Date.now();"
                 + "document.head.appendChild(s);"
+                + "}"
+                + "add('cqb-enhancements-script','" + ENHANCEMENTS_URL + "');"
+                + "add('cqb-dashboard-fresh-script','" + DASHBOARD_URL + "');"
+                + "add('cqb-history-charts-script','" + HISTORY_CHARTS_URL + "');"
+                + "})()";
+        view.evaluateJavascript(script, null);
+    }
+
+    private void forceVersionLabel(WebView view) {
+        final String script = "(function(){"
+                + "var apply=function(){var v=document.getElementById('appVersion');"
+                + "if(v){v.textContent='v" + APP_VERSION + "';v.setAttribute('aria-label','Versão do app " + APP_VERSION + "');}};"
+                + "apply();setTimeout(apply,300);setTimeout(apply,1200);"
                 + "})()";
         view.evaluateJavascript(script, null);
     }
@@ -130,7 +154,7 @@ public class MainActivity extends Activity {
             }
 
             if ("\"out\"".equals(result)) {
-                view.loadUrl(LOGIN_URL);
+                view.loadUrl(LOGIN_URL + "?native=" + APP_VERSION + "&ts=" + System.currentTimeMillis());
                 return;
             }
 
@@ -138,7 +162,7 @@ public class MainActivity extends Activity {
             if (authProbeAttempts < 80) {
                 view.postDelayed(() -> revealWhenAuthIsReady(view), 50);
             } else {
-                view.loadUrl(LOGIN_URL);
+                view.loadUrl(LOGIN_URL + "?native=" + APP_VERSION + "&ts=" + System.currentTimeMillis());
             }
         });
     }
@@ -150,7 +174,7 @@ public class MainActivity extends Activity {
                 + "if(!auth)return;"
                 + "window.__cqbLogoutWatcher=true;"
                 + "new MutationObserver(function(){"
-                + "if(!auth.classList.contains('hidden'))location.replace('./acesso.html');"
+                + "if(!auth.classList.contains('hidden'))location.replace('./acesso.html?ts='+Date.now());"
                 + "}).observe(auth,{attributes:true,attributeFilter:['class']});"
                 + "})()";
         view.evaluateJavascript(watcherScript, null);
@@ -167,7 +191,7 @@ public class MainActivity extends Activity {
             if (target != null && target.startsWith("https://")) {
                 webView.loadUrl(target);
             } else {
-                webView.loadUrl(APP_URL);
+                webView.loadUrl(freshAppUrl());
             }
             return true;
         }
@@ -187,13 +211,13 @@ public class MainActivity extends Activity {
     private void openIntent(Intent intent) {
         Uri uri = intent != null ? intent.getData() : null;
         if (uri == null) {
-            webView.loadUrl(APP_URL);
+            webView.loadUrl(freshAppUrl());
             return;
         }
 
         if ("confessoquebebi".equalsIgnoreCase(uri.getScheme())) {
             String target = uri.getQueryParameter("url");
-            webView.loadUrl(target != null && target.startsWith("https://") ? target : APP_URL);
+            webView.loadUrl(target != null && target.startsWith("https://") ? target : freshAppUrl());
             return;
         }
 
@@ -202,7 +226,7 @@ public class MainActivity extends Activity {
                 && (APP_HOST.equalsIgnoreCase(host) || AUTH_HOST.equalsIgnoreCase(host))) {
             webView.loadUrl(uri.toString());
         } else {
-            webView.loadUrl(APP_URL);
+            webView.loadUrl(freshAppUrl());
         }
     }
 
