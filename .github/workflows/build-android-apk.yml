@@ -9,7 +9,7 @@ on:
       - ".github/workflows/build-android-apk.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -47,9 +47,21 @@ jobs:
       - name: Rename APK
         run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.7.5-debug.apk
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: Confesso-que-bebi-Android-v0.7.5
           path: Confesso-que-bebi-v0.7.5-debug.apk
           if-no-files-found: error
+
+      - name: Publish APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view android-v0.7.5 >/dev/null 2>&1; then
+            gh release upload android-v0.7.5 Confesso-que-bebi-v0.7.5-debug.apk --clobber
+          else
+            gh release create android-v0.7.5 Confesso-que-bebi-v0.7.5-debug.apk \
+              --title "Confesso que bebi Android v0.7.5" \
+              --notes "Wrapper Android corrigido para evitar cache antigo e carregar os gráficos do Histórico."
+          fi
