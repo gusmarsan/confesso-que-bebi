@@ -97,25 +97,24 @@
     const bottom = 28;
     const plotWidth = width - left - right;
     const plotHeight = height - top - bottom;
-    const maxDose = Math.max(1, ...points.map(point => Number(point.doses || 0)));
-    const yMax = Math.max(1, Math.ceil(maxDose * 1.14));
+    const yMax = 30;
     const xAt = index => points.length === 1 ? left + plotWidth / 2 : left + (index / (points.length - 1)) * plotWidth;
     const yAt = value => top + plotHeight - (Number(value || 0) / yMax) * plotHeight;
     const path = points.map((point, index) => `${index ? "L" : "M"}${xAt(index).toFixed(1)},${yAt(point.doses).toFixed(1)}`).join(" ");
 
-    const grid = [0, .5, 1].map(fraction => {
-      const y = top + plotHeight * fraction;
-      const label = formatNumber(yMax * (1 - fraction), 1);
+    const grid = [30, 25, 20, 15, 10, 5, 0].map(value => {
+      const y = yAt(value);
+      const label = formatNumber(value, 1);
       return `<line x1="${left}" y1="${y}" x2="${width-right}" y2="${y}" stroke="#eee5ed" stroke-width="1"/><text x="${left-6}" y="${y+3}" text-anchor="end" fill="#625a70" font-size="9" font-weight="700">${label}</text>`;
     }).join("");
 
     const dots = points.map((point, index) => {
       const x = xAt(index);
       const y = yAt(point.doses);
-      return `<g><circle cx="${x}" cy="${y}" r="4.2" fill="${color}" stroke="#FFFDFC" stroke-width="2"><title>${formatShortDateKey(point.key)} · ${formatNumber(point.doses, 2)} doses</title></circle><text x="${x}" y="${height-8}" text-anchor="middle" fill="#625a70" font-size="9" font-weight="700">${formatShortDateKey(point.key)}</text></g>`;
+      return `<g><circle cx="${x}" cy="${y}" r="2" fill="${color}" stroke="#FFFDFC" stroke-width="1"><title>${formatShortDateKey(point.key)} · ${formatNumber(point.doses, 2)} doses</title></circle><text x="${x}" y="${height-8}" text-anchor="middle" fill="#625a70" font-size="9" font-weight="700">${formatShortDateKey(point.key)}</text></g>`;
     }).join("");
 
-    return `<svg class="cqb-history-chart-svg" viewBox="0 0 ${width} ${height}" width="${width}" role="img" aria-label="${title}: evolução das doses registradas"><path d="${path}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${grid}${dots}</svg>`;
+    return `<svg class="cqb-history-chart-svg" viewBox="0 0 ${width} ${height}" width="${width}" role="img" aria-label="${title}: evolução das doses registradas"><path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>${grid}${dots}</svg>`;
   }
 
   function ensureSection() {
