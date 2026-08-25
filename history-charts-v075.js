@@ -3,9 +3,12 @@
   window.__cqbHistoryChartsV075Loaded = true;
 
   const FIREBASE_VERSION = "12.16.0";
+  const DASHBOARD_LIMITS = { 4: 12, 5: 17, 6: 15 };
   let entries = [];
   let unsubscribeEntries = null;
   let versionObserver = null;
+  let dashboardObserver = null;
+  let dashboardRefreshTimer = null;
 
   const $ = selector => document.querySelector(selector);
   const pad = value => String(value).padStart(2, "0");
@@ -25,6 +28,16 @@
       minimumFractionDigits: 0,
       maximumFractionDigits: digits
     }).format(Number(value) || 0);
+  }
+
+  function parseDisplayedNumber(value) {
+    const normalized = String(value || "")
+      .trim()
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .replace(/[^0-9.-]/g, "");
+    const number = Number(normalized);
+    return Number.isFinite(number) ? number : 0;
   }
 
   function installVersionLabel() {
@@ -72,6 +85,60 @@
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function applyDashboardLimits() {
+    const cards = [...document.querySelectorAll("#dayGrid .day")];
+    if (cards.length < 7) return;
+
+    cards.forEach((card, index) => {
+      const limit = DASHBOARD_LIMITS[index];
+      if (!limit) return;
+
+      const doses = parseDisplayedNumber(card.querySelector(".day-dose")?.textContent);
+      const percentage = Math.min(100, (doses / limit) * 100);
+      const overLimit = doses > limit;
+
+      card.style.setProperty("--fill", `${percentage}%`);
+      card.classList.add("limit-day");
+      card.classList.toggle("over-limit", overLimit);
+
+      let limitLabel = card.querySelector(".day-limit");
+      if (!limitLabel) {
+        limitLabel = document.createElement("span");
+        limitLabel.className = "day-limit";
+        card.appendChild(limitLabel);
+      }
+      const expectedLabel = `de ${limit} doses`;
+      if (limitLabel.textContent !== expectedLabel) limitLabel.textContent = expectedLabel;
+
+      let overLabel = card.querySelector(".day-over");
+      if (overLimit && !overLabel) {
+        overLabel = document.createElement("span");
+        overLabel.className = "day-over";
+        overLabel.textContent = "limite ultrapassado";
+        card.appendChild(overLabel);
+      } else if (!overLimit && overLabel) {
+        overLabel.remove();
+      }
+    });
+  }
+
+  function scheduleDashboardLimits() {
+    clearTimeout(dashboardRefreshTimer);
+    dashboardRefreshTimer = setTimeout(applyDashboardLimits, 20);
+  }
+
+  function installDashboardObserver() {
+    const dayGrid = $("#dayGrid");
+    if (!dayGrid || dashboardObserver) {
+      scheduleDashboardLimits();
+      return;
+    }
+
+    dashboardObserver = new MutationObserver(scheduleDashboardLimits);
+    dashboardObserver.observe(dayGrid, { childList: true, subtree: true });
+    scheduleDashboardLimits();
   }
 
   function seriesForDay(dayOfWeek) {
@@ -135,13 +202,14 @@
   function render() {
     installVersionLabel();
     installStyles();
+    installDashboardObserver();
     const section = ensureSection();
     if (!section) return;
 
     const definitions = [
       { day: 5, title: "Sextas-feiras", color: "#E8644A", limit: 12 },
-      { day: 6, title: "Sábados", color: "#344C73", limit: 25 },
-      { day: 0, title: "Domingos", color: "#4BA9B8", limit: 13 }
+      { day: 6, title: "Sábados", color: "#344C73", limit: 17 },
+      { day: 0, title: "Domingos", color: "#4BA9B8", limit: 15 }
     ];
 
     const cards = definitions.map(definition => {
@@ -171,6 +239,7 @@
   async function init() {
     installVersionLabel();
     installStyles();
+    installDashboardObserver();
     render();
 
     const appModule = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`);
