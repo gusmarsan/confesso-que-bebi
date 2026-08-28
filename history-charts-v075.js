@@ -269,3 +269,6 @@
 
   init().catch(error => console.error("Falha ao carregar gráficos do histórico v0.7.6", error));
 })();
+
+import("./threshold-alert-v076.js?v=0.7.6-alert1")
+  .catch(error => console.error("Falha ao carregar alerta de 70%", error));
