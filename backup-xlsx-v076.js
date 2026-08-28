@@ -1,31 +1,25 @@
 (() => {
-  if (window.__cqbExportCsvLoaded) return;
-  window.__cqbExportCsvLoaded = true;
+  if (window.__cqbBackupXlsxV076Loaded) return;
+  window.__cqbBackupXlsxV076Loaded = true;
 
   const FIREBASE_VERSION = "12.16.0";
+  const APP_VERSION = "0.7.6";
+  const BACKUP_TYPE = "confesso-que-bebi-backup";
+  const BACKUP_FORMAT_VERSION = 1;
+  const XLSX_URL = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+  const ENTRY_COLLECTION = "drinkEntries";
+  const SETTINGS_COLLECTION = "atypicalWeeks";
   const $ = selector => document.querySelector(selector);
-  const DRINK_TYPES = [
-    ["cerveja", "Cerveja"],
-    ["vinho-tinto", "Vinho tinto"],
-    ["vinho-branco", "Vinho branco"],
-    ["espumante", "Espumante"],
-    ["cachaca", "Cachaça"],
-    ["vodka", "Vodka"],
-    ["whisky", "Whisky"],
-    ["gin", "Gin"],
-    ["campari", "Campari"],
-    ["xeque-mate", "Xeque-Mate"],
-    ["bebida-estranha", "Bebida estranha"],
-    ["outro", "Outro"]
-  ];
 
-  function showToast(message, duration = 2800) {
+  let xlsxPromise = null;
+
+  function showToast(message, duration = 3200) {
     const toast = $("#toast");
     if (!toast) return;
     toast.textContent = message;
     toast.classList.add("show");
-    clearTimeout(window.__cqbExportCsvToastTimer);
-    window.__cqbExportCsvToastTimer = setTimeout(() => toast.classList.remove("show"), duration);
+    clearTimeout(window.__cqbBackupXlsxToastTimer);
+    window.__cqbBackupXlsxToastTimer = setTimeout(() => toast.classList.remove("show"), duration);
   }
 
   function formatFileStamp(date = new Date()) {
@@ -46,19 +40,11 @@
     if (match) return `${match[3]}-${match[2]}-${match[1]}T${match[4]}:${match[5]}`;
     match = text.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
     if (match) return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
-    return "";
+    return text;
   }
 
-  function formatNumber(value, maximumFractionDigits = 2) {
-    const number = Number(value);
-    if (!Number.isFinite(number)) return "";
-    return number.toLocaleString("pt-BR", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits
-    });
-  }
-
-  function parseNumber(value) {
+  function asNumber(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
     const text = String(value ?? "").trim().replace(/\s/g, "");
     if (!text) return 0;
     const normalized = text.includes(",")
@@ -68,126 +54,22 @@
     return Number.isFinite(number) ? number : 0;
   }
 
-  function normalizeText(value) {
-    return String(value || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim()
-      .toLocaleLowerCase("pt-BR");
-  }
+  function loadXlsx() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    if (xlsxPromise) return xlsxPromise;
 
-  function drinkTypeFromName(name) {
-    const normalized = normalizeText(name);
-    return DRINK_TYPES.find(([, label]) => normalizeText(label) === normalized)?.[0] || "outro";
-  }
+    xlsxPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = XLSX_URL;
+      script.async = true;
+      script.onload = () => window.XLSX
+        ? resolve(window.XLSX)
+        : reject(new Error("A biblioteca do Excel não foi carregada."));
+      script.onerror = () => reject(new Error("Não foi possível carregar o recurso necessário para gerar o Excel."));
+      document.head.appendChild(script);
+    });
 
-  function csvCell(value) {
-    const text = value === null || value === undefined ? "" : String(value);
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-
-  function detectDelimiter(text) {
-    const firstLine = String(text || "").split(/\r?\n/, 1)[0] || "";
-    let semicolons = 0;
-    let commas = 0;
-    let quoted = false;
-    for (let index = 0; index < firstLine.length; index += 1) {
-      const char = firstLine[index];
-      if (char === '"') {
-        if (quoted && firstLine[index + 1] === '"') index += 1;
-        else quoted = !quoted;
-      } else if (!quoted && char === ";") semicolons += 1;
-      else if (!quoted && char === ",") commas += 1;
-    }
-    return semicolons >= commas ? ";" : ",";
-  }
-
-  function parseCsv(text) {
-    const source = String(text || "").replace(/^\uFEFF/, "");
-    const delimiter = detectDelimiter(source);
-    const rows = [];
-    let row = [];
-    let cell = "";
-    let quoted = false;
-
-    for (let index = 0; index < source.length; index += 1) {
-      const char = source[index];
-      if (quoted) {
-        if (char === '"' && source[index + 1] === '"') {
-          cell += '"';
-          index += 1;
-        } else if (char === '"') {
-          quoted = false;
-        } else {
-          cell += char;
-        }
-      } else if (char === '"') {
-        quoted = true;
-      } else if (char === delimiter) {
-        row.push(cell);
-        cell = "";
-      } else if (char === "\n") {
-        row.push(cell.replace(/\r$/, ""));
-        rows.push(row);
-        row = [];
-        cell = "";
-      } else {
-        cell += char;
-      }
-    }
-
-    if (cell.length || row.length) {
-      row.push(cell.replace(/\r$/, ""));
-      rows.push(row);
-    }
-    return rows.filter(item => item.some(value => String(value).trim()));
-  }
-
-  function rowsFromCsv(text) {
-    const rows = parseCsv(text);
-    if (rows.length < 2) return [];
-
-    const headers = rows[0].map(value => normalizeText(value));
-    const column = (...names) => names
-      .map(name => headers.indexOf(normalizeText(name)))
-      .find(index => index >= 0) ?? -1;
-
-    const indexes = {
-      datetime: column("Data e hora", "Data/hora", "Data"),
-      beverage: column("Bebida"),
-      volume: column("Volume (ml)", "Volume"),
-      abv: column("Teor alcoólico (%)", "Teor alcoólico", "ABV"),
-      count: column("Quantidade"),
-      grams: column("Álcool (g)", "Alcool (g)"),
-      doses: column("Doses"),
-      id: column("ID")
-    };
-
-    if (indexes.datetime < 0 || indexes.beverage < 0 || indexes.volume < 0 || indexes.abv < 0 || indexes.count < 0) {
-      throw new Error("A planilha não tem as colunas esperadas do Confesso que bebi.");
-    }
-
-    return rows.slice(1).map(values => {
-      const datetime = parseDateTime(values[indexes.datetime]);
-      const typeName = String(values[indexes.beverage] || "Outro").trim() || "Outro";
-      const volume = parseNumber(values[indexes.volume]);
-      const abv = parseNumber(values[indexes.abv]);
-      const count = parseNumber(values[indexes.count]);
-      const calculatedGrams = volume * count * (abv / 100) * 0.789;
-      const grams = indexes.grams >= 0 ? parseNumber(values[indexes.grams]) : calculatedGrams;
-      const doses = indexes.doses >= 0 ? parseNumber(values[indexes.doses]) : grams / 10;
-      return {
-        id: indexes.id >= 0 ? String(values[indexes.id] || "").trim() : "",
-        datetime,
-        type: drinkTypeFromName(typeName),
-        typeName,
-        volume,
-        abv,
-        count,
-        grams,
-        doses
-      };
-    }).filter(item => item.datetime && item.volume > 0 && item.abv >= 0 && item.count > 0);
+    return xlsxPromise;
   }
 
   async function waitForFirebaseApp(appModule) {
@@ -213,68 +95,180 @@
     };
   }
 
-  function downloadCsv(rows) {
+  function serializeValue(value) {
+    if (value === null || value === undefined) return value ?? null;
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return value;
+    if (value instanceof Date) return { __cqbType: "date", value: value.toISOString() };
+    if (typeof value?.toDate === "function") {
+      try {
+        return { __cqbType: "timestamp", value: value.toDate().toISOString() };
+      } catch {
+        return null;
+      }
+    }
+    if (Array.isArray(value)) return value.map(serializeValue);
+    if (typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, serializeValue(item)]));
+    }
+    return String(value);
+  }
+
+  function deserializeValue(value, firestoreModule) {
+    if (value === null || value === undefined) return value;
+    if (Array.isArray(value)) return value.map(item => deserializeValue(item, firestoreModule));
+    if (typeof value === "object") {
+      if (value.__cqbType === "timestamp" && value.value) {
+        const date = new Date(value.value);
+        return Number.isNaN(date.getTime()) ? null : firestoreModule.Timestamp.fromDate(date);
+      }
+      if (value.__cqbType === "date" && value.value) {
+        const date = new Date(value.value);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, deserializeValue(item, firestoreModule)]));
+    }
+    return value;
+  }
+
+  function recoveryJson(data) {
+    return JSON.stringify(serializeValue(data));
+  }
+
+  function parseRecoveryJson(value, firestoreModule) {
+    const text = String(value || "").trim();
+    if (!text) return null;
+    try {
+      return deserializeValue(JSON.parse(text), firestoreModule);
+    } catch {
+      throw new Error("O arquivo contém uma linha de recuperação inválida.");
+    }
+  }
+
+  function buildEntriesSheet(XLSX, docs) {
     const header = [
+      "ID",
       "Data e hora",
+      "Data ISO",
       "Bebida",
+      "Tipo",
       "Volume (ml)",
       "Teor alcoólico (%)",
       "Quantidade",
       "Álcool (g)",
       "Doses",
-      "ID"
+      "Dados de recuperação"
     ];
 
-    const lines = [header, ...rows].map(row => row.map(csvCell).join(";")).join("\r\n");
-    const blob = new Blob(["\uFEFF", lines], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `confesso-que-bebi_${formatFileStamp()}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const rows = docs.map(({ id, data }) => [
+      id,
+      formatDateTime(data.datetime),
+      String(data.datetime || ""),
+      data.typeName || data.type || "",
+      data.type || "",
+      asNumber(data.volume),
+      asNumber(data.abv),
+      asNumber(data.count),
+      asNumber(data.grams),
+      asNumber(data.doses),
+      recoveryJson(data)
+    ]);
+
+    const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    sheet["!cols"] = [
+      { wch: 24 }, { wch: 18 }, { wch: 19 }, { wch: 22 }, { wch: 18 },
+      { wch: 13 }, { wch: 19 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
+      { wch: 3, hidden: true }
+    ];
+    sheet["!autofilter"] = { ref: `A1:K${Math.max(1, rows.length + 1)}` };
+    return sheet;
   }
 
-  async function exportCsv() {
+  function buildSettingsSheet(XLSX, docs) {
+    const header = [
+      "ID",
+      "Chave",
+      "Tipo",
+      "Dia atípico",
+      "Semana oculta",
+      "Dados de recuperação"
+    ];
+
+    const rows = docs.map(({ id, data }) => [
+      id,
+      data.key || "",
+      data.kind || (id.startsWith("day-") ? "day" : id.startsWith("hidden-week-") ? "hidden-week" : "setting"),
+      data.atypical === true ? "Sim" : data.atypical === false ? "Não" : "",
+      data.hidden === true ? "Sim" : data.hidden === false ? "Não" : "",
+      recoveryJson(data)
+    ]);
+
+    const sheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    sheet["!cols"] = [
+      { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 3, hidden: true }
+    ];
+    sheet["!autofilter"] = { ref: `A1:F${Math.max(1, rows.length + 1)}` };
+    return sheet;
+  }
+
+  function buildMetadataSheet(XLSX, user, entriesCount, settingsCount) {
+    const rows = [
+      ["Campo", "Valor"],
+      ["Formato", BACKUP_TYPE],
+      ["Versão do formato", BACKUP_FORMAT_VERSION],
+      ["Versão do app", APP_VERSION],
+      ["Gerado em", new Date().toISOString()],
+      ["Conta", user.email || ""],
+      ["Registros", entriesCount],
+      ["Ajustes", settingsCount],
+      ["Observação", "As colunas visíveis são para consulta. A coluna oculta 'Dados de recuperação' preserva o conteúdo necessário para restaurar o app."]
+    ];
+
+    const sheet = XLSX.utils.aoa_to_sheet(rows);
+    sheet["!cols"] = [{ wch: 24 }, { wch: 92 }];
+    return sheet;
+  }
+
+  async function exportXlsx() {
     const button = $("#weekReport");
-    const originalText = button?.textContent || "Exportar CSV";
+    const originalText = button?.textContent || "Backup Excel";
 
     if (button) {
       button.disabled = true;
-      button.textContent = "Gerando CSV…";
+      button.textContent = "Gerando Excel…";
     }
 
     try {
-      const { auth, db, firestoreModule } = await getFirebase();
+      const [XLSX, firebase] = await Promise.all([loadXlsx(), getFirebase()]);
+      const { auth, db, firestoreModule } = firebase;
       const user = auth.currentUser;
-      if (!user) throw new Error("Entre na conta antes de exportar os dados.");
+      if (!user) throw new Error("Entre na conta antes de gerar o backup.");
 
-      const snapshot = await firestoreModule.getDocs(
-        firestoreModule.collection(db, "users", user.uid, "drinkEntries")
-      );
-
-      const entries = snapshot.docs
-        .map(item => ({ id: item.id, ...item.data() }))
-        .sort((a, b) => String(b.datetime || "").localeCompare(String(a.datetime || "")));
-
-      const rows = entries.map(item => [
-        formatDateTime(item.datetime),
-        item.typeName || item.type || "",
-        formatNumber(item.volume),
-        formatNumber(item.abv),
-        formatNumber(item.count),
-        formatNumber(item.grams),
-        formatNumber(item.doses),
-        item.id
+      const [entriesSnapshot, settingsSnapshot] = await Promise.all([
+        firestoreModule.getDocs(firestoreModule.collection(db, "users", user.uid, ENTRY_COLLECTION)),
+        firestoreModule.getDocs(firestoreModule.collection(db, "users", user.uid, SETTINGS_COLLECTION))
       ]);
 
-      downloadCsv(rows);
-      showToast(`CSV exportado: ${entries.length} registros.`);
+      const entries = entriesSnapshot.docs
+        .map(item => ({ id: item.id, data: item.data() }))
+        .sort((a, b) => String(a.data.datetime || "").localeCompare(String(b.data.datetime || "")));
+      const settings = settingsSnapshot.docs
+        .map(item => ({ id: item.id, data: item.data() }))
+        .sort((a, b) => a.id.localeCompare(b.id));
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, buildEntriesSheet(XLSX, entries), "Registros");
+      XLSX.utils.book_append_sheet(workbook, buildSettingsSheet(XLSX, settings), "Ajustes");
+      XLSX.utils.book_append_sheet(workbook, buildMetadataSheet(XLSX, user, entries.length, settings.length), "Metadados");
+
+      XLSX.writeFile(workbook, `confesso-que-bebi_backup_${formatFileStamp()}.xlsx`, {
+        compression: true,
+        bookType: "xlsx"
+      });
+
+      showToast(`Backup Excel criado: ${entries.length} registros.`);
     } catch (error) {
-      console.error("Falha ao exportar CSV", error);
-      showToast(error?.message || "Não foi possível exportar o CSV.", 3600);
+      console.error("Falha ao gerar backup Excel", error);
+      showToast(error?.message || "Não foi possível gerar o backup Excel.", 4200);
     } finally {
       if (button) {
         button.disabled = false;
@@ -283,100 +277,189 @@
     }
   }
 
-  async function restoreCsv(file) {
+  function sheetRows(XLSX, workbook, name) {
+    const sheet = workbook.Sheets[name];
+    return sheet ? XLSX.utils.sheet_to_json(sheet, { defval: "", raw: true }) : [];
+  }
+
+  function readMetadata(XLSX, workbook) {
+    const sheet = workbook.Sheets.Metadados;
+    if (!sheet) return {};
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: true });
+    return Object.fromEntries(rows.slice(1).filter(row => row[0]).map(row => [String(row[0]), row[1]]));
+  }
+
+  function entryFromRow(row, firestoreModule) {
+    const restored = parseRecoveryJson(row["Dados de recuperação"], firestoreModule);
+    const data = restored || {
+      datetime: parseDateTime(row["Data ISO"] || row["Data e hora"]),
+      typeName: String(row.Bebida || "Outro"),
+      type: String(row.Tipo || "outro"),
+      volume: asNumber(row["Volume (ml)"]),
+      abv: asNumber(row["Teor alcoólico (%)"]),
+      count: asNumber(row.Quantidade),
+      grams: asNumber(row["Álcool (g)"]),
+      doses: asNumber(row.Doses),
+      createdAt: Date.now()
+    };
+
+    const datetime = String(data?.datetime || "").trim();
+    if (!datetime) return null;
+    return { id: String(row.ID || "").trim(), data: { ...data, datetime } };
+  }
+
+  function settingFromRow(row, firestoreModule) {
+    const restored = parseRecoveryJson(row["Dados de recuperação"], firestoreModule);
+    if (restored) return { id: String(row.ID || "").trim(), data: restored };
+
+    const id = String(row.ID || "").trim();
+    const key = String(row.Chave || "").trim();
+    if (!id && !key) return null;
+
+    const data = { key };
+    if (String(row["Dia atípico"] || "").toLocaleLowerCase("pt-BR") === "sim") data.atypical = true;
+    if (String(row["Semana oculta"] || "").toLocaleLowerCase("pt-BR") === "sim") data.hidden = true;
+    if (row.Tipo) data.kind = String(row.Tipo);
+    return { id, data };
+  }
+
+  async function writeDocsInBatches({ db, firestoreModule, user, collectionName, docs }) {
+    const collectionRef = firestoreModule.collection(db, "users", user.uid, collectionName);
+
+    for (let index = 0; index < docs.length; index += 400) {
+      const batch = firestoreModule.writeBatch(db);
+      docs.slice(index, index + 400).forEach(item => {
+        const reference = item.id
+          ? firestoreModule.doc(collectionRef, item.id)
+          : firestoreModule.doc(collectionRef);
+        const data = { ...item.data, updatedAt: firestoreModule.serverTimestamp() };
+        batch.set(reference, data);
+      });
+      await batch.commit();
+    }
+  }
+
+  async function restoreXlsx(file) {
     if (!file) return;
-    const input = $("#cqbCsvRestoreInput");
+    const input = $("#cqbBackupRestoreInput");
+    const restoreButton = $("#restoreBackupExcel");
+    const originalText = restoreButton?.textContent || "Restaurar backup Excel";
+
+    if (restoreButton) {
+      restoreButton.disabled = true;
+      restoreButton.textContent = "Lendo backup…";
+    }
 
     try {
-      const text = await file.text();
-      const rows = rowsFromCsv(text);
-      if (!rows.length) throw new Error("Nenhum registro válido foi encontrado na planilha.");
-
-      const { auth, db, firestoreModule } = await getFirebase();
+      const [XLSX, firebase, buffer] = await Promise.all([loadXlsx(), getFirebase(), file.arrayBuffer()]);
+      const { auth, db, firestoreModule } = firebase;
       const user = auth.currentUser;
-      if (!user) throw new Error("Entre na conta antes de enviar a planilha.");
+      if (!user) throw new Error("Entre na conta antes de restaurar um backup.");
+
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const metadata = readMetadata(XLSX, workbook);
+      if (metadata.Formato && metadata.Formato !== BACKUP_TYPE) {
+        throw new Error("Este arquivo não é um backup válido do Confesso que bebi.");
+      }
+
+      const rawEntries = sheetRows(XLSX, workbook, "Registros");
+      const rawSettings = sheetRows(XLSX, workbook, "Ajustes");
+      if (!rawEntries.length && !workbook.Sheets.Registros) {
+        throw new Error("A aba Registros não foi encontrada no backup.");
+      }
+
+      const entries = rawEntries.map(row => entryFromRow(row, firestoreModule)).filter(Boolean);
+      const settings = rawSettings.map(row => settingFromRow(row, firestoreModule)).filter(Boolean);
+      if (!entries.length && !settings.length) throw new Error("Nenhum dado válido foi encontrado no backup.");
 
       const accepted = confirm(
-        `Restaurar ${rows.length} ${rows.length === 1 ? "registro" : "registros"} desta planilha?\n\n` +
-        "Registros com o mesmo ID serão atualizados. Os demais dados da conta serão mantidos."
+        `Restaurar ${entries.length} ${entries.length === 1 ? "registro" : "registros"}` +
+        `${settings.length ? ` e ${settings.length} ${settings.length === 1 ? "ajuste" : "ajustes"}` : ""}?\n\n` +
+        "Itens com o mesmo ID serão substituídos pelo conteúdo do backup. Os demais dados da conta serão mantidos e nada que não esteja no arquivo será apagado."
       );
       if (!accepted) return;
 
-      showToast("Restaurando registros…", 6000);
-      const collectionRef = firestoreModule.collection(db, "users", user.uid, "drinkEntries");
+      if (restoreButton) restoreButton.textContent = "Restaurando…";
+      showToast("Restaurando backup Excel…", 8000);
 
-      for (let index = 0; index < rows.length; index += 400) {
-        const batch = firestoreModule.writeBatch(db);
-        rows.slice(index, index + 400).forEach(item => {
-          const reference = item.id
-            ? firestoreModule.doc(collectionRef, item.id)
-            : firestoreModule.doc(collectionRef);
-          batch.set(reference, {
-            datetime: item.datetime,
-            type: item.type,
-            typeName: item.typeName,
-            volume: item.volume,
-            abv: item.abv,
-            count: item.count,
-            grams: item.grams,
-            doses: item.doses,
-            createdAt: Date.now(),
-            updatedAt: firestoreModule.serverTimestamp()
-          }, { merge: true });
-        });
-        await batch.commit();
-      }
+      await writeDocsInBatches({ db, firestoreModule, user, collectionName: ENTRY_COLLECTION, docs: entries });
+      await writeDocsInBatches({ db, firestoreModule, user, collectionName: SETTINGS_COLLECTION, docs: settings });
 
-      showToast(`Planilha restaurada: ${rows.length} registros.`, 4200);
+      showToast(`Backup restaurado: ${entries.length} registros.`, 4600);
     } catch (error) {
-      console.error("Falha ao restaurar CSV", error);
-      showToast(error?.message || "Não foi possível restaurar a planilha.", 4200);
+      console.error("Falha ao restaurar backup Excel", error);
+      showToast(error?.message || "Não foi possível restaurar o backup Excel.", 4600);
     } finally {
+      if (restoreButton) {
+        restoreButton.disabled = false;
+        restoreButton.textContent = originalText;
+      }
       if (input) input.value = "";
     }
+  }
+
+  function injectStyles() {
+    if ($("#cqb-backup-xlsx-style")) return;
+    const style = document.createElement("style");
+    style.id = "cqb-backup-xlsx-style";
+    style.textContent = `
+      .cqb-backup-restore-row{
+        display:flex;justify-content:flex-end;margin:10px 0 2px;
+      }
+      .cqb-backup-restore-row .secondary{
+        min-height:40px;padding:0 13px;font-size:.68rem;
+      }
+      @media(max-width:520px){
+        .cqb-backup-restore-row .secondary{width:100%}
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   function installUi() {
     const exportButton = $("#weekReport");
     if (!exportButton) return false;
-    if (exportButton.dataset.cqbExportCsv === "1") return true;
+    if (exportButton.dataset.cqbBackupXlsx === "1") return true;
 
-    exportButton.dataset.cqbExportCsv = "1";
-    exportButton.textContent = "Exportar CSV";
-    exportButton.setAttribute("aria-label", "Baixar registros em CSV");
+    injectStyles();
+    exportButton.dataset.cqbBackupXlsx = "1";
+    exportButton.onclick = null;
+    exportButton.textContent = "Backup Excel";
+    exportButton.setAttribute("aria-label", "Baixar backup Excel com todos os registros");
     exportButton.addEventListener("click", event => {
       event.preventDefault();
       event.stopImmediatePropagation();
-      exportCsv();
+      exportXlsx();
     }, true);
 
-    $("#restoreBackupExcel")?.remove();
-    $("#cqbBackupRestoreInput")?.remove();
-    $("#cqb-backup-xlsx-style")?.remove();
+    $("#restoreCsv")?.remove();
+    $("#cqbCsvRestoreInput")?.remove();
 
-    let restoreButton = $("#restoreCsv");
-    if (!restoreButton) {
-      restoreButton = document.createElement("button");
-      restoreButton.id = "restoreCsv";
+    const historyHero = $("#history .history-hero");
+    if (historyHero && !$("#cqbBackupRestoreRow")) {
+      const row = document.createElement("div");
+      row.id = "cqbBackupRestoreRow";
+      row.className = "cqb-backup-restore-row";
+
+      const restoreButton = document.createElement("button");
+      restoreButton.id = "restoreBackupExcel";
       restoreButton.type = "button";
-      restoreButton.className = "hero-action";
-      restoreButton.textContent = "Enviar planilha";
-      restoreButton.setAttribute("aria-label", "Enviar CSV para restaurar registros");
-      exportButton.insertAdjacentElement("afterend", restoreButton);
-    }
+      restoreButton.className = "secondary";
+      restoreButton.textContent = "Restaurar backup Excel";
+      restoreButton.setAttribute("aria-label", "Restaurar dados de um backup Excel");
+      row.appendChild(restoreButton);
+      historyHero.insertAdjacentElement("afterend", row);
 
-    let input = $("#cqbCsvRestoreInput");
-    if (!input) {
-      input = document.createElement("input");
-      input.id = "cqbCsvRestoreInput";
+      const input = document.createElement("input");
+      input.id = "cqbBackupRestoreInput";
       input.type = "file";
-      input.accept = ".csv,text/csv";
+      input.accept = ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
       input.hidden = true;
       document.body.appendChild(input);
-    }
 
-    restoreButton.addEventListener("click", () => input.click());
-    input.addEventListener("change", () => restoreCsv(input.files?.[0]));
+      restoreButton.addEventListener("click", () => input.click());
+      input.addEventListener("change", () => restoreXlsx(input.files?.[0]));
+    }
 
     return true;
   }
