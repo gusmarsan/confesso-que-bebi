@@ -1,4 +1,4 @@
-const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.7-fix1";
+const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.7-fix2";
 const APP_SHELL = [
   "./",
   "./index.html",
