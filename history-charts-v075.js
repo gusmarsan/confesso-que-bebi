@@ -43,14 +43,14 @@
   function installVersionLabel() {
     const current = $("#appVersion");
     if (!current) return;
-    if (current.textContent !== "v0.7.6") current.textContent = "v0.7.6";
+    if (current.textContent !== "v0.7.7") current.textContent = "v0.7.7";
     current.dataset.cqbV075 = "1";
     current.setAttribute("aria-label", "Versão do app 0.7.5");
 
     if (!versionObserver) {
       versionObserver = new MutationObserver(() => {
         const version = $("#appVersion");
-        if (version && version.textContent !== "v0.7.6") version.textContent = "v0.7.6";
+        if (version && version.textContent !== "v0.7.7") version.textContent = "v0.7.7";
       });
       versionObserver.observe(current, { childList: true, characterData: true, subtree: true });
     }
@@ -267,7 +267,7 @@
     });
   }
 
-  init().catch(error => console.error("Falha ao carregar gráficos do histórico v0.7.6", error));
+  init().catch(error => console.error("Falha ao carregar gráficos do histórico v0.7.7", error));
 })();
 
 import("./threshold-alert-v076.js?v=0.7.6-alert1")
