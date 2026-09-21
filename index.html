@@ -253,6 +253,11 @@
       background:var(--yellow);
       transition:height .35s ease;
     }
+    .day.saturday-split .day-split-divider{
+      position:absolute;z-index:0;left:10%;right:10%;top:50%;height:1px;
+      background:rgba(118,101,48,.22);pointer-events:none;
+    }
+    .day.saturday-split>:not(.day-split-divider){position:relative;z-index:1}
     .day.today{border-color:#ff5f7a70;box-shadow:0 0 0 3px #ff5f7a10}
     .day.limit-day{border-color:#e6d69c}
     .day.over-limit{border-color:#ff7b7b;background:#fff5f5}
@@ -711,7 +716,7 @@
 
     const DAY_LIMITS={
       4:12,
-      5:25,
+      5:16,
       6:13
     };
 
@@ -1411,9 +1416,10 @@
         const percentage=limit?Math.min(100,(doses/limit)*100):0;
         const overLimit=limit&&doses>limit;
         const card=document.createElement("article");
-        card.className="day"+(dateKey===todayKey?" today":"")+(limit?" limit-day":"")+(overLimit?" over-limit":"");
+        card.className="day"+(dateKey===todayKey?" today":"")+(limit?" limit-day":"")+(overLimit?" over-limit":"")+(index===5?" saturday-split":"");
         card.style.setProperty("--fill",`${percentage}%`);
         card.innerHTML=`
+          ${index===5?'<span class="day-split-divider" aria-hidden="true"></span>':""}
           <span class="day-name">${name}</span>
           <span class="day-number">${pad(date.getDate())}</span>
           <span class="day-dose">${formatNumber(doses,1)}</span>
