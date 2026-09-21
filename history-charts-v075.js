@@ -3,6 +3,7 @@
   window.__cqbHistoryChartsV075Loaded = true;
 
   const FIREBASE_VERSION = "12.16.0";
+  // Limites usados também para manter os cards do dashboard sincronizados.
   const DASHBOARD_LIMITS = { 4: 12, 5: 16, 6: 14 };
   let entries = [];
   let unsubscribeEntries = null;
