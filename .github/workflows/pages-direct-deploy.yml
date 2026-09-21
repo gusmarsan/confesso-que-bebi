@@ -41,15 +41,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare authoritative v0.7.6 source
+      - name: Prepare authoritative v0.7.7 source
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
 
-          VERSION = "0.7.6"
-          CACHE_REV = "0.7.6-fix1"
-          SW_MARKER = "cqb-sw-bootstrap-076-fix1"
+          VERSION = "0.7.7"
+          CACHE_REV = "0.7.7-fix1"
+          SW_MARKER = "cqb-sw-bootstrap-077-fix1"
 
           index_path = Path("index.html")
           html = index_path.read_text(encoding="utf-8")
@@ -111,20 +111,20 @@ jobs:
           Path("version.txt").write_text(f"{VERSION}\n", encoding="utf-8")
           PY
 
-      - name: Verify v0.7.6 source bundle
+      - name: Verify v0.7.7 source bundle
         run: |
-          grep -q '>v0.7.6</span>' index.html
-          grep -q 'app-enhancements.js?v=0.7.6' index.html
-          grep -q 'app-dashboard-v06.js?v=0.7.6' index.html
-          grep -q 'history-charts-v075.js?v=0.7.6' index.html
-          grep -q 'backup-xlsx-v076.js?v=0.7.6' index.html
-          grep -q 'cqb-sw-bootstrap-076-fix1' index.html
+          grep -q '>v0.7.7</span>' index.html
+          grep -q 'app-enhancements.js?v=0.7.7' index.html
+          grep -q 'app-dashboard-v06.js?v=0.7.7' index.html
+          grep -q 'history-charts-v075.js?v=0.7.7' index.html
+          grep -q 'backup-xlsx-v076.js?v=0.7.7' index.html
+          grep -q 'cqb-sw-bootstrap-077-fix1' index.html
           grep -q 'const yMax = 30' history-charts-v075.js
           grep -q 'BACKUP_TYPE = "confesso-que-bebi-backup"' backup-xlsx-v076.js
           grep -q 'drinkEntries' backup-xlsx-v076.js
           grep -q 'atypicalWeeks' backup-xlsx-v076.js
-          grep -q 'confesso-que-bebi-pwa-v0.7.6-fix1' sw.js
-          grep -q '^0.7.6$' version.txt
+          grep -q 'confesso-que-bebi-pwa-v0.7.7-fix1' sw.js
+          grep -q '^0.7.7$' version.txt
 
       - name: Sync prepared source to main
         run: |
@@ -132,7 +132,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html app-enhancements.js app-dashboard-v06.js history-charts-v075.js backup-xlsx-v076.js sw.js install.html version.txt
           if ! git diff --cached --quiet; then
-            git commit -m "Make v0.7.6 source authoritative"
+            git commit -m "Make v0.7.7 source authoritative"
             git push origin HEAD:main
           fi
 
