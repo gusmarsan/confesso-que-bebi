@@ -457,16 +457,16 @@
   </style>
 </head>
 <body class="auth-pending">
-  <script id="cqb-sw-bootstrap-077-fix1">
+  <script id="cqb-sw-bootstrap-077-fix2">
   (() => {
     if (!("serviceWorker" in navigator)) return;
-    const reloadKey = "cqb-sw-bootstrap-077-fix1-reloaded";
+    const reloadKey = "cqb-sw-bootstrap-077-fix2-reloaded";
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (sessionStorage.getItem(reloadKey)) return;
       sessionStorage.setItem(reloadKey, "1");
       location.reload();
     });
-    navigator.serviceWorker.register("./sw.js?rev=0.7.7-fix1", {scope:"./", updateViaCache:"none"})
+    navigator.serviceWorker.register("./sw.js?rev=0.7.7-fix2", {scope:"./", updateViaCache:"none"})
       .then(registration => registration.update())
       .catch(error => console.error("Falha ao atualizar service worker", error));
   })();
