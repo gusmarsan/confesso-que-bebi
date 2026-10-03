@@ -45,23 +45,23 @@ jobs:
         run: gradle --no-daemon :app:assembleDebug
 
       - name: Rename APK
-        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.7.5-debug.apk
+        run: cp android-app/app/build/outputs/apk/debug/app-debug.apk Confesso-que-bebi-v0.7.8-debug.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Confesso-que-bebi-Android-v0.7.5
-          path: Confesso-que-bebi-v0.7.5-debug.apk
+          name: Confesso-que-bebi-Android-v0.7.8
+          path: Confesso-que-bebi-v0.7.8-debug.apk
           if-no-files-found: error
 
       - name: Publish APK release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view android-v0.7.5 >/dev/null 2>&1; then
-            gh release upload android-v0.7.5 Confesso-que-bebi-v0.7.5-debug.apk --clobber
+          if gh release view android-v0.7.8 >/dev/null 2>&1; then
+            gh release upload android-v0.7.8 Confesso-que-bebi-v0.7.8-debug.apk --clobber
           else
-            gh release create android-v0.7.5 Confesso-que-bebi-v0.7.5-debug.apk \
-              --title "Confesso que bebi Android v0.7.5" \
-              --notes "Wrapper Android corrigido para evitar cache antigo e carregar os gráficos do Histórico."
+            gh release create android-v0.7.8 Confesso-que-bebi-v0.7.8-debug.apk \
+              --title "Confesso que bebi Android v0.7.8" \
+              --notes "Integração com o SmallTV: um novo registro de bebida pode exibir o copo e SAÚDE! no relógio."
           fi

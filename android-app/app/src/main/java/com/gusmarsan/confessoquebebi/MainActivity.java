@@ -13,6 +13,12 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.JavascriptInterface;
+
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
 
@@ -23,7 +29,9 @@ public class MainActivity extends Activity {
     private static final String HISTORY_CHARTS_URL = "https://gusmarsan.github.io/confesso-que-bebi/history-charts-v075.js";
     private static final String APP_HOST = "gusmarsan.github.io";
     private static final String AUTH_HOST = "confesso-que-bebi.firebaseapp.com";
-    private static final String APP_VERSION = "0.7.5";
+    private static final String APP_VERSION = "0.7.8";
+    private static final String SMALLTV_HOST = "192.168.0.212";
+    private static final int SMALLTV_PORT = 80;
 
     private WebView webView;
     private int authProbeAttempts = 0;
@@ -68,6 +76,8 @@ public class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(false);
         settings.setSupportMultipleWindows(false);
         settings.setUserAgentString(settings.getUserAgentString() + " ConfessoQueBebiAndroid/" + APP_VERSION);
+
+        webView.addJavascriptInterface(new SmallTVBridge(), "AndroidSmallTV");
 
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptCookie(true);
@@ -178,6 +188,38 @@ public class MainActivity extends Activity {
                 + "}).observe(auth,{attributes:true,attributeFilter:['class']});"
                 + "})()";
         view.evaluateJavascript(watcherScript, null);
+    }
+
+
+    private final class SmallTVBridge {
+        @JavascriptInterface
+        public void drinkCheckin() {
+            new Thread(() -> sendDrinkNotification()).start();
+        }
+    }
+
+    private void sendDrinkNotification() {
+        final String body = "{\"type\":\"info\",\"anim\":\"drink\",\"title\":\"SAÚDE!\",\"ttl\":5,\"priority\":1,\"color\":\"#F7B733\"}";
+        final byte[] payload = body.getBytes(StandardCharsets.UTF_8);
+
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(SMALLTV_HOST, SMALLTV_PORT), 1200);
+            socket.setSoTimeout(1200);
+
+            OutputStream out = socket.getOutputStream();
+            String headers =
+                    "POST /api/notify HTTP/1.1\r\n"
+                    + "Host: " + SMALLTV_HOST + "\r\n"
+                    + "Content-Type: application/json; charset=utf-8\r\n"
+                    + "Content-Length: " + payload.length + "\r\n"
+                    + "Connection: close\r\n\r\n";
+
+            out.write(headers.getBytes(StandardCharsets.US_ASCII));
+            out.write(payload);
+            out.flush();
+        } catch (Exception ignored) {
+            // O registro da bebida nunca depende do SmallTV estar disponível.
+        }
     }
 
     private boolean handleNavigation(Uri uri) {

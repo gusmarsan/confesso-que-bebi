@@ -516,7 +516,7 @@
         </div>
       </div>
       <div class="account-tools">
-        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.7.7</span>
+        <span id="appVersion" class="version-pill" aria-label="Versão do app">v0.7.8</span>
         <div id="syncStatus" class="saved-pill syncing">Conectando</div>
         <button id="logoutButton" class="logout-button" type="button">Sair</button>
       </div>
@@ -1711,7 +1711,11 @@
       renderDashboard();
       toast(wasEditing?"Registro atualizado.":"Bebida registrada.");
 
-      setDoc(doc(userEntriesCollection(),item.id),entryDocument(item),{merge:true}).catch(error=>{
+      setDoc(doc(userEntriesCollection(),item.id),entryDocument(item),{merge:true}).then(()=>{
+        if(!wasEditing && window.AndroidSmallTV){
+          try{window.AndroidSmallTV.drinkCheckin();}catch(error){console.warn("SmallTV indisponível.",error);}
+        }
+      }).catch(error=>{
         if(previousItem){
           entries=entries.map(entry=>entry.id===previousItem.id?previousItem:entry);
         }else{
