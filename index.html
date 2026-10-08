@@ -94,9 +94,7 @@
       padding:22px;background:var(--paper);
     }
     .auth-screen.hidden{display:none}
-    body.auth-pending .auth-screen,
-    body.auth-pending .app,
-    body.auth-pending .bottom-nav{visibility:hidden!important}
+    body.auth-pending .auth-screen{display:none!important}
     .auth-card{
       width:min(100%,390px);padding:25px;border:1px solid var(--line);border-radius:26px;
       background:var(--card);box-shadow:var(--shadow);
@@ -457,18 +455,22 @@
   </style>
 </head>
 <body class="auth-pending">
-  <script id="cqb-sw-bootstrap-077-fix2">
+  <script id="cqb-sw-bootstrap-077-fast1">
   (() => {
     if (!("serviceWorker" in navigator)) return;
-    const reloadKey = "cqb-sw-bootstrap-077-fix2-reloaded";
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (sessionStorage.getItem(reloadKey)) return;
-      sessionStorage.setItem(reloadKey, "1");
-      location.reload();
-    });
-    navigator.serviceWorker.register("./sw.js?rev=0.7.7-fix2", {scope:"./", updateViaCache:"none"})
-      .then(registration => registration.update())
-      .catch(error => console.error("Falha ao atualizar service worker", error));
+
+    const register = () => {
+      navigator.serviceWorker.register("./sw.js?rev=0.7.7-fast1", {scope:"./", updateViaCache:"none"})
+        .then(registration => {
+          const update = () => registration.update().catch(() => undefined);
+          if ("requestIdleCallback" in window) requestIdleCallback(update, {timeout:2000});
+          else setTimeout(update, 750);
+        })
+        .catch(error => console.error("Falha ao preparar modo offline", error));
+    };
+
+    if (document.readyState === "complete") register();
+    else window.addEventListener("load", register, {once:true});
   })();
   </script>
   <script>setTimeout(()=>document.body.classList.remove("auth-pending"),4000)</script>
@@ -716,8 +718,8 @@
 
     const DAY_LIMITS={
       4:12,
-      5:16,
-      6:14
+      5:17,
+      6:15
     };
 
     const BEER_VOLUME_PRESETS=[
