@@ -1,4 +1,4 @@
-const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.7-fix2";
+const CACHE_NAME = "confesso-que-bebi-pwa-v0.7.7-fast1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -15,29 +15,52 @@ const APP_SHELL = [
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)).catch(() => undefined));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(APP_SHELL))
+      .catch(() => undefined)
+  );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))));
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
+    )
+  );
   self.clients.claim();
 });
 
 self.addEventListener("fetch", event => {
   const request = event.request;
   if (request.method !== "GET") return;
+
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  const networkUpdate = fetch(request)
+    .then(async response => {
+      if (response && response.ok) {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, response.clone());
+      }
+      return response;
+    });
+
+  event.waitUntil(networkUpdate.then(() => undefined).catch(() => undefined));
+
   event.respondWith(
-    fetch(request, {cache:"no-store"})
-      .then(response => {
-        if (response && response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => undefined);
+    caches.match(request).then(async cached => {
+      if (cached) return cached;
+      try {
+        return await networkUpdate;
+      } catch {
+        if (request.mode === "navigate") {
+          return (await caches.match("./index.html")) || (await caches.match("./"));
         }
-        return response;
-      })
-      .catch(() => caches.match(request).then(cached => cached || caches.match("./index.html")))
+        return Response.error();
+      }
+    })
   );
 });
