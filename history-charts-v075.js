@@ -3,8 +3,7 @@
   window.__cqbHistoryChartsV075Loaded = true;
 
   const FIREBASE_VERSION = "12.16.0";
-  // Limites usados também para manter os cards do dashboard sincronizados.
-  const DASHBOARD_LIMITS = { 4: 12, 5: 16, 6: 14 };
+  const DASHBOARD_LIMITS = { 4: 12, 5: 17, 6: 15 };
   let entries = [];
   let unsubscribeEntries = null;
   let versionObserver = null;
@@ -46,7 +45,7 @@
     if (!current) return;
     if (current.textContent !== "v0.7.7") current.textContent = "v0.7.7";
     current.dataset.cqbV075 = "1";
-    current.setAttribute("aria-label", "Versão do app 0.7.5");
+    current.setAttribute("aria-label", "Versão do app 0.7.7");
 
     if (!versionObserver) {
       versionObserver = new MutationObserver(() => {
@@ -270,6 +269,3 @@
 
   init().catch(error => console.error("Falha ao carregar gráficos do histórico v0.7.7", error));
 })();
-
-import("./threshold-alert-v076.js?v=0.7.6-alert1")
-  .catch(error => console.error("Falha ao carregar alerta de 70%", error));
