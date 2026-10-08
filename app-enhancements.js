@@ -6,9 +6,9 @@
   const DAY_COLLECTION = "atypicalWeeks";
   const DAY_PREFIX = "day-";
   const EXPECTED_DAY_DOSES = {
-    0: 13,
+    0: 15,
     5: 12,
-    6: 25
+    6: 17
   };
 
   let auth;
